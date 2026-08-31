@@ -10,6 +10,8 @@
 
 import { SCHEMA_VERSION } from '@yggdrasil-forge/common'
 import type { NodeDef, TreeDef } from '@yggdrasil-forge/core'
+import { conPosicions } from './colocacion.js'
+import { COR_REXION, ETIQUETA_REXION, REXIONS, TAG_AUTO } from './rexions.js'
 import {
   DRIVE_SPECS,
   FUTURO_LONXANO,
@@ -19,61 +21,14 @@ import {
   LIMIAR_TRISTURA,
 } from './drives.js'
 
-/** Ids das cinco rexións da mente. */
-export const REXIONS = {
-  corpo: 'corpo',
-  linguaxe: 'linguaxe',
-  afectos: 'afectos',
-  conceptos: 'conceptos',
-  memorias: 'memorias',
-  // A SOMBRA non ten nodos na semente e o seu grupo tampouco se declara
-  // aquí: nace coa primeira leccion da ausencia (ver sombras.ts). Un bebe
-  // ben coidado nunca chega a ver esta rexion.
-  sombra: 'sombra',
-  // Igual cá SOMBRA: a rexión dos SONS nace co primeiro son que oe, non
-  // na semente. Ao nacer, o bebé aínda non oíu ningún.
-  sons: 'sons',
-} as const
-
-export type RexionId = (typeof REXIONS)[keyof typeof REXIONS]
-
-export const COR_REXION: Record<RexionId, string> = {
-  corpo: '#e08a3c',
-  linguaxe: '#a97ae0',
-  afectos: '#e07aa8',
-  conceptos: '#6fbf73',
-  memorias: '#5aa9e0',
-  sombra: '#8a8f9c',
-  sons: '#c8a15a',
-}
-
-export const ETIQUETA_REXION: Record<RexionId, string> = {
-  corpo: 'CORPO',
-  linguaxe: 'LINGUAXE',
-  afectos: 'AFECTOS',
-  conceptos: 'CONCEPTOS',
-  memorias: 'MEMORIAS',
-  sombra: 'SOMBRA',
-  sons: 'SONS',
-}
-
-/**
- * Tag que marca un nodo como AUTÓNOMO: a política de crecemento
- * desbloquéao (e volve bloquealo) soa en canto o seu prerequisito
- * pasa a estar satisfeito (ou deixa de estalo).
- *
- * O motor NON fai isto por si: `TreeEngine` nunca move un nodo de
- * `locked` a `unlockable`/`unlocked` sen que alguén chame `unlock()`.
- * Ver docs/ACHADOS.md (achado 1).
- */
-export const TAG_AUTO = 'auto'
-
-/** Prefixos de id por familia de nodo nacido en runtime. */
-export const PREFIXO = {
-  palabra: 'palabra:',
-  concepto: 'concepto:',
-  memoria: 'memoria:',
-} as const
+export {
+  COR_REXION,
+  ETIQUETA_REXION,
+  PREFIXO,
+  REXIONS,
+  type RexionId,
+  TAG_AUTO,
+} from './rexions.js'
 
 const nodosCorpo: readonly NodeDef[] = [
   {
@@ -240,7 +195,7 @@ const nodosMemorias: readonly NodeDef[] = [
  */
 export const NODOS_AO_NACER: readonly string[] = ['eu', 'verbo', 'memoria:nacemento']
 
-export function menteSemente(): TreeDef {
+function semente(): TreeDef {
   return {
     id: 'a-cova-mente',
     schemaVersion: SCHEMA_VERSION,
@@ -251,15 +206,11 @@ export function menteSemente(): TreeDef {
     },
     author: 'Agarfal',
     rootNodeId: 'eu',
-    layout: {
-      type: 'clustered-radial',
-      groupRadius: 280,
-      orbitRadius: 104,
-      memberLayout: 'cluster',
-      clusterArc: Math.PI * 1.2,
-      meshType: 'spokes',
-      curve: 'radial',
-    },
+    // `custom` = IdentityLayout: o motor limítase a ler
+    // `NodeDef.position`, e as posicións calculámolas nós en
+    // `colocacion.ts`. O `clustered-radial` poñía todos os membros dun
+    // grupo nun arco, e con douscentas palabras iso é unha mancha.
+    layout: { type: 'custom', curve: 'radial' },
     resources: [
       ...DRIVE_SPECS.map((d) => ({
         id: d.id,
@@ -352,5 +303,10 @@ export function menteSemente(): TreeDef {
       principio: 'a cova de Platón — o bebé só percibe o que o coidador proxecta',
     },
   }
+}
+
+/** A mente semente, xa colocada. */
+export function menteSemente(): TreeDef {
+  return conPosicions(semente())
 }
 // ── FIN: a mente semente ──

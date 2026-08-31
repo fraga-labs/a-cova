@@ -16,7 +16,8 @@
     "mente:json": "node scripts/mente-a-json.mjs",
     "mente:validate": "node scripts/mente-a-json.mjs --out .tmp/mente-semente.json && ygg validate .tmp/mente-semente.json",
     "verificar": "npm run typecheck && npm run test && npm run mente:validate && npm run bebe:validate",
-    "bebe:validate": "ygg validate .tmp/bebe-medrado.json"
+    "bebe:validate": "ygg validate .tmp/bebe-medrado.json",
+    "estres": "node scripts/estres-linguaxe.mjs"
   },
   "dependencies": {
     "@yggdrasil-forge/common": "^1.0.0",

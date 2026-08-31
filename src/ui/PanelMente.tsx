@@ -10,6 +10,14 @@ import { COR_REXION, ETIQUETA_REXION, REXIONS, type RexionId } from '../cova/men
 import type { Cova } from '../cova/useCova.js'
 import { temaCova } from './tema.js'
 
+/**
+ * Con douscentas palabras non hai layout que valla: ler douscentas
+ * etiquetas á vez é imposible. O filtro non agocha os nodos —
+ * esvaéceos—, así que segues vendo o tamaño da mente pero les só o
+ * que che interesa.
+ */
+type Filtro = 'todas' | 'intenta' | 'di'
+
 const ORDE_REXIONS: readonly RexionId[] = [
   REXIONS.corpo,
   REXIONS.sons,
@@ -24,6 +32,7 @@ export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
   const arbore = useRef<SkillTreeHandle>(null)
   const [zoom, setZoom] = useState(100)
   const [agochadas, setAgochadas] = useState<readonly RexionId[]>([])
+  const [filtro, setFiltro] = useState<Filtro>('todas')
 
   // As rexións que EXISTEN no documento, non as que imaxinamos: a SOMBRA
   // só aparece se o bebé chegou a aprender algo da ausencia. Un bebé ben
@@ -94,7 +103,7 @@ export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
 
       <UltimoAceso cova={cova} />
 
-      <div className="mente__lenzo">
+      <div className="mente__lenzo" data-filtro={filtro}>
         {/* O ThemeProvider ten que envolver o SkillTree: o wrapper por
             defecto respecta un tema ascendente e só impón `minimal`
             (pensado para fondo claro) se non hai ningún. */}
@@ -127,6 +136,19 @@ export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
             <span className="lenda__mostra lenda__mostra--maximo" /> máximo
           </li>
         </ul>
+        <label className="filtro">
+          <span className="visualmente-oculto">Que palabras amosar</span>
+          <select
+            value={filtro}
+            onChange={(e) => {
+              setFiltro(e.target.value as Filtro)
+            }}
+          >
+            <option value="todas">todas as palabras</option>
+            <option value="intenta">só as que intenta dicir</option>
+            <option value="di">só as que di ben</option>
+          </select>
+        </label>
         <div className="zoom">
           <button type="button" onClick={() => { arbore.current?.zoomOut(); setZoom(Math.round((arbore.current?.getZoom() ?? 1) * 100)) }}>
             −

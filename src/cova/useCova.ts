@@ -16,6 +16,7 @@ import type { EstimuloId } from './lexico.js'
 import { menteSemente } from './mente-semente.js'
 import { gardar, recuperar } from './persistencia.js'
 import { type Acontecemento, acontecemento } from './acontecementos.js'
+import { recolocar } from './colocacion.js'
 import { DECAEMENTO_ATENCION, ensinarPalabra, esquecer } from './linguaxe.js'
 import {
   ESTADO_INICIAL,
@@ -207,6 +208,8 @@ export function useCova(): Cova {
     const t = agora()
     const autos = await reconciliarAutonomos(engine, t)
     const conceptos = await xerarConceptos(engine, t)
+    // Ao final: o que naceu aínda non ten sitio no debuxo.
+    await recolocar(engine)
     return [...autos, ...conceptos]
   }, [engine])
 

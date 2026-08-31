@@ -31,6 +31,13 @@ npm run dev
 npm run verificar
 ```
 
+```bash
+npm run estres 200
+```
+
+`estres` responde á pregunta «e se aprende douscentas palabras, vese algo?» sen opinar: cría un bebé
+de N palabras, calcula o MESMO layout que usa a app e conta cantos nodos se pisan.
+
 `verificar` fai as tres cousas que teñen que estar ben antes de entregar: tipos (`tsc`), probas
 (`vitest`) e **validación do documento co CLI real** (`ygg validate`) — tanto a mente semente como
 unha mente medrada en runtime (esa escríbea a proba de exportar, por iso vai despois de `test`).
@@ -123,6 +130,7 @@ consumidores.
 | `src/cova/mente-semente.ts` | A mente coa que nace: 13 nodos en 5 rexións. Documento válido desde o día un. |
 | `src/cova/politica.ts` | **O corazón novo.** As 5 regras de crecemento. Puro respecto de React; testado. |
 | `src/cova/linguaxe.ts` | Sons, atención, comprensión e produción. O bucle da fala. |
+| `src/cova/colocacion.ts` | Onde vai cada nodo. Filotaxe, para que non se pisen nin con mil. |
 | `src/cova/fonoloxia.ts` | Como lle sae unha palabra cos sons que domina. Puro e testado. |
 | `src/cova/lexico.ts` | A táboa de estímulos e campos semánticos. Está á vista a propósito. |
 | `src/cova/sombras.ts` | As leccións da ausencia e o que lle cambian ao mundo. |

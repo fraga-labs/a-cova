@@ -949,3 +949,22 @@ body {
   margin: 2px 0 0;
   color: var(--acento);
 }
+
+/* o filtro de palabras */
+
+.filtro select {
+  padding: 2px 4px;
+  border: 2px solid var(--bordo);
+  background: var(--fondo-fondo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 10px;
+}
+
+/* Esvaécense, non desaparecen: así segues a ver o tamaño da mente. */
+.mente__lenzo[data-filtro='intenta'] :where(.yf-skill-node[data-node-id^='palabra:'][data-tier='0']),
+.mente__lenzo[data-filtro='di'] :where(.yf-skill-node[data-node-id^='palabra:'][data-tier='0']),
+.mente__lenzo[data-filtro='di'] :where(.yf-skill-node[data-node-id^='palabra:'][data-tier='1']),
+.mente__lenzo[data-filtro='di'] :where(.yf-skill-node[data-node-id^='palabra:'][data-tier='2']) {
+  opacity: 0.1;
+}

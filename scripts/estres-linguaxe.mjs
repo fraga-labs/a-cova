@@ -1,0 +1,162 @@
+// ── INICIO: estrés da linguaxe ──
+// «E se xogo un lote de tempo e aprende 200 palabras? Vese algo?»
+//
+// Non se responde opinando: críase un bebé con N palabras, cálculase o
+// MESMO layout que usa a aplicación e mídese se os nodos se pisan.
+//
+//   node scripts/estres-linguaxe.mjs [N]
+//
+// Escribe ademais `.tmp/bebe-estres.json` co formato exacto do gardado
+// do navegador, para poder metelo en localStorage e velo cos ollos.
+
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { createServer } from 'vite'
+
+const CANTAS = Number(process.argv[2] ?? 200)
+
+/** Palabras plausibles en galego, feitas de sílabas reais. */
+function inventarPalabras(n) {
+  const inicios = [
+    'ma', 'pa', 'ca', 'to', 'le', 'so', 'bo', 'te', 'mi', 'lu',
+    'ne', 'ro', 'fi', 'ga', 'xa', 'be', 'do', 'pi', 'sa', 'no',
+  ]
+  const medios = ['', 'ri', 'la', 'mo', 'te', 'ne', 'co', 'sa', 'lo', 'de']
+  const fins = ['a', 'o', 'e', 'ela', 'iño', 'ada', 'ón', 'al', 'iña', 'ar']
+  const palabras = new Set()
+  let i = 0
+  while (palabras.size < n && i < n * 50) {
+    const p =
+      inicios[i % inicios.length] +
+      medios[Math.floor(i / inicios.length) % medios.length] +
+      fins[Math.floor(i / (inicios.length * medios.length)) % fins.length]
+    palabras.add(p)
+    i += 1
+  }
+  return [...palabras]
+}
+
+const servidor = await createServer({
+  configFile: false,
+  logLevel: 'silent',
+  appType: 'custom',
+  server: { middlewareMode: true },
+})
+
+try {
+  const core = await servidor.ssrLoadModule('/node_modules/@yggdrasil-forge/core/dist/index.js')
+  const { menteSemente } = await servidor.ssrLoadModule('/src/cova/mente-semente.ts')
+  const { ensinarPalabra } = await servidor.ssrLoadModule('/src/cova/linguaxe.ts')
+
+  const engine = new core.TreeEngine(menteSemente(), {})
+  for (const id of ['eu', 'verbo', 'memoria:nacemento']) {
+    await engine.unlock(id)
+  }
+
+  const palabras = inventarPalabras(CANTAS)
+  let familiaridade = {}
+  let ditas = []
+
+  // Cada palabra recibe un número distinto de exposicións: unha partida
+  // de verdade non ten douscentas palabras todas no mesmo punto, ten
+  // unhas cantas que xa di e unha morea que aínda non.
+  palabras.forEach((palabra, orde) => undefined)
+  for (const [orde, palabra] of palabras.entries()) {
+    const veces = 2 + (orde % 15)
+    for (let i = 0; i < veces; i += 1) {
+      const r = await ensinarPalabra(
+        engine,
+        { referente: 'auga', forza: 100 },
+        familiaridade,
+        ditas,
+        palabra,
+        i,
+      )
+      if (r === null) break
+      familiaridade = r.familiaridade
+      ditas = r.ditas
+      if (r.producion >= 3) break
+    }
+  }
+
+  const { recolocar } = await servidor.ssrLoadModule('/src/cova/colocacion.ts')
+  await recolocar(engine)
+
+  const treeDef = engine.getTreeDef()
+
+  // ── A medida ──
+  const rexistro = new core.LayoutEngineRegistry()
+    .register(new core.ClusteredRadialLayout())
+    .register(new core.RadialLayout())
+    .register(new core.TreeLayout())
+    .register(new core.ConstellationLayout())
+    .register(new core.IdentityLayout())
+
+  const layout = core.computeLayout(treeDef, rexistro, 'gl')
+  if (!core.isOk(layout)) {
+    throw new Error(`o layout fallou: ${layout.error.message}`)
+  }
+
+  const posicions = [...layout.value.nodes.entries()]
+  // Raio aproximado dun nodo `small` no tema actual, en unidades de layout.
+  const RAIO = 18
+  let pisados = 0
+  let minima = Number.POSITIVE_INFINITY
+  for (let i = 0; i < posicions.length; i += 1) {
+    for (let j = i + 1; j < posicions.length; j += 1) {
+      const [, a] = posicions[i]
+      const [, b] = posicions[j]
+      const d = Math.hypot(a.x - b.x, a.y - b.y)
+      if (d < minima) minima = d
+      if (d < RAIO * 2) pisados += 1
+    }
+  }
+
+  const porTier = {}
+  for (const n of treeDef.nodes) {
+    if (!n.id.startsWith('palabra:')) continue
+    const t = engine.getNodeState(n.id)?.currentTier ?? 0
+    porTier[t] = (porTier[t] ?? 0) + 1
+  }
+
+  const porRexion = {}
+  for (const n of treeDef.nodes) {
+    const g = n.group ?? '(sen grupo)'
+    porRexion[g] = (porRexion[g] ?? 0) + 1
+  }
+
+  const b = layout.value.bounds
+  process.stdout.write(
+    [
+      `palabras ensinadas : ${palabras.length}`,
+      `nodos totais       : ${treeDef.nodes.length}`,
+      `arestas            : ${treeDef.edges.length}`,
+      `nodos por rexión   : ${JSON.stringify(porRexion)}`,
+      `palabras por rango : ${JSON.stringify(porTier)}`,
+      `lenzo              : ${Math.round(b.maxX - b.minX)} × ${Math.round(b.maxY - b.minY)} unidades`,
+      `distancia mínima   : ${minima.toFixed(1)} (dous nodos písanse por baixo de ${RAIO * 2})`,
+      `pares que se pisan : ${pisados}`,
+      '',
+    ].join('\n'),
+  )
+
+  const destino = resolve(process.cwd(), '.tmp/bebe-estres.json')
+  mkdirSync(dirname(destino), { recursive: true })
+  writeFileSync(
+    destino,
+    JSON.stringify({
+      clave: 'a-cova:v2',
+      gardadoEn: 0,
+      nome: 'Estrés',
+      tree: treeDef,
+      state: engine.getSnapshot(),
+      politica: { momentos: 400, dia: 7, atencion: { referente: null, forza: 0 }, familiaridade, ditas },
+      acontecementos: [],
+    }),
+    'utf8',
+  )
+  process.stdout.write(`escrito: ${destino}\n`)
+} finally {
+  await servidor.close()
+}
+// ── FIN: estrés da linguaxe ──

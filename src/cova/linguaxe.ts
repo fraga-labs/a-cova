@@ -24,7 +24,7 @@
 import type { TreeEngine } from '@yggdrasil-forge/core'
 import { isOk } from '@yggdrasil-forge/core'
 import { comoDi, dia, gananciaSon, segmentar } from './fonoloxia.js'
-import { type EstimuloId, casaConEstimulo, normalizar } from './lexico.js'
+import { type EstimuloId, normalizar } from './lexico.js'
 import { PREFIXO, REXIONS } from './mente-semente.js'
 import { type Acontecemento, acontecemento } from './acontecementos.js'
 
@@ -49,8 +49,20 @@ export const MARXE_ESQUECEMENTO = 12
 /** Comprensión que dá unha exposición perfecta (atención ao 100). */
 const GANANCIA_BASE = 30
 
-/** Comprensión que se perde por momento sen reforzo. */
-export const ESQUECEMENTO = 1
+/**
+ * Comprensión que se perde por momento sen reforzo, segundo o ben
+ * asentada que estea a palabra.
+ *
+ * Non é o mesmo esquecer algo que acabas de oír ca algo que xa dis ben.
+ * Cun só número, un vocabulario de douscentas palabras derretíase enteiro
+ * á vez —vímolo: a liña temporal enchíase de «xa non lle sae»—, e iso
+ * non é como funciona a memoria: o que está consolidado aguanta.
+ */
+export const ESQUECEMENTO_POR_RANGO = [1.2, 0.8, 0.4, 0.15] as const
+
+export function esquecementoDe(producion: number): number {
+  return ESQUECEMENTO_POR_RANGO[Math.min(producion, 3)] ?? 1
+}
 
 /** Canto decae a atención por momento. Oito momentos ata cero. */
 export const DECAEMENTO_ATENCION = 12
@@ -259,9 +271,19 @@ export async function ensinarPalabra(
     feitos.push(acontecemento('nace-palabra', `oíu por primeira vez «${palabra}»`, agora, nodeId))
   }
 
-  // 3. CAPA 1: só se comprende o que se di mentres se atende ao mesmo.
-  const enContexto =
-    atencion.referente !== null && casaConEstimulo(palabra, atencion.referente) && atencion.forza > 0
+  // 3. CAPA 1: comprender é ligar a palabra ao que se está a atender.
+  //
+  // Antes esixíase ademais que a palabra estivese na táboa do léxico
+  // (`casaConEstimulo`). Iso era un teito escondido: só 28 palabras do
+  // mundo podían chegar a significar algo, e todo o demais rebotaba
+  // para sempre. Un bebé non funciona así — aprende a palabra que lle
+  // digas mentres mira o que ti miras, sexa cal sexa.
+  //
+  // O que se perde é a posibilidade de EQUIVOCARSE ao ligar, e iso non
+  // se perde: recupérase na capa 3 do deseño como sobreextensión, que é
+  // como se equivoca de verdade (chamarlle «can» ao gato), non
+  // rebotando.
+  const enContexto = atencion.referente !== null && atencion.forza > 0
 
   const antes = seguinte[nodeId] ?? 0
   let comprension = antes
@@ -286,9 +308,7 @@ export async function ensinarPalabra(
     feitos.push(
       acontecemento(
         'oe',
-        atencion.referente === null
-          ? `oíu «${palabra}», pero non estabades a nada`
-          : `oíu «${palabra}» fóra de contexto`,
+        `oíu «${palabra}», pero non estabades a nada`,
         agora,
         nodeId,
       ),
@@ -385,11 +405,11 @@ export async function esquecer(
     if (antes <= 0) {
       continue
     }
-    const despois = Math.max(0, antes - ESQUECEMENTO)
-    seguinte[nodo.id] = despois
-
     const palabra = nodo.id.slice(PREFIXO.palabra.length)
     const producionAntes = engine.getNodeState(nodo.id)?.currentTier ?? 0
+
+    const despois = Math.max(0, antes - esquecementoDe(producionAntes))
+    seguinte[nodo.id] = despois
     // Ao PERDER, os limiares baixan pola marxe de histérese.
     const producionAgora = rangoDeProducion(despois, palabra, dominados, MARXE_ESQUECEMENTO)
 

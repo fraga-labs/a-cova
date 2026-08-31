@@ -132,13 +132,14 @@ export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
 
       <p className="contexto">
         Agora mesmo <strong>{estimulo.descricion}</strong>.
-        {estimulo.palabras.length > 0 ? (
+        {cova.politica.atencion.referente === null ? (
+          ' Sen atención só oe os sons; non aprende que significan.'
+        ) : (
           <>
             {' '}
-            Só entende palabras <em>en contexto</em>: {estimulo.palabras.slice(0, 4).join(' · ')}
+            O que lle ensines <em>agora</em> queda ligado a iso. Por exemplo:{' '}
+            {estimulo.palabras.slice(0, 3).join(' · ')}
           </>
-        ) : (
-          ' Fóra de contexto só oe as palabras; non as comprende.'
         )}
       </p>
 

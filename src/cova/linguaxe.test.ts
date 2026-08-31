@@ -13,6 +13,7 @@ import {
   SEN_ATENCION,
   comprensionDe,
   ensinarPalabra,
+  esquecementoDe,
   esquecer,
   idPalabra,
   idSon,
@@ -109,10 +110,13 @@ describe('capa 1 — a atención', () => {
     expect(comprensionDe(r.familiaridade, 'auga')).toBe(0)
   })
 
-  it('fóra de contexto tampouco: a palabra ten que casar co que se atende', async () => {
+  it('calquera palabra pode aprenderse: o léxico non é un teito', async () => {
+    // Antes só se podían comprender as 28 palabras da táboa do léxico e
+    // todo o demais rebotaba para sempre. Un bebé aprende a palabra que
+    // lle digas mentres mira o que ti miras.
     const e = motor()
-    const r = await ensinar(e, 'auga', 5, { referente: 'fame', forza: 100 })
-    expect(comprensionDe(r.familiaridade, 'auga')).toBe(0)
+    const r = await ensinar(e, 'bicicleta', 4, { referente: 'xogo', forza: 100 })
+    expect(comprensionDe(r.familiaridade, 'bicicleta')).toBeGreaterThan(0)
   })
 
   it('a atención frouxa ensina menos ca a atención chea', async () => {
@@ -193,11 +197,19 @@ describe('o esquecemento, agora sobre a comprensión', () => {
     const r = await ensinar(e, 'auga', 16)
     expect(e.getNodeState(idPalabra('auga'))?.currentTier).toBe(3)
 
+    // Fan falta MOITOS momentos: unha palabra que xa di ben está
+    // consolidada e non se cae por deixala uns minutos.
     let familiaridade = r.familiaridade
-    for (let i = 0; i < 40; i += 1) {
+    for (let i = 0; i < 250; i += 1) {
       familiaridade = (await esquecer(e, familiaridade, i)).familiaridade
     }
     expect(e.getNodeState(idPalabra('auga'))?.currentTier).toBeLessThan(3)
+  })
+
+  it('o que xa di ben aguanta moito máis ca o que acaba de oír', async () => {
+    const asentada = await ensinar(motor(), 'auga', 16)
+    const fresca = await ensinar(motor(), 'auga', 2)
+    expect(esquecementoDe(asentada.producion)).toBeLessThan(esquecementoDe(fresca.producion))
   })
 
   it('os SONS non se esquecen: unha vez que sabes facer /a/, sábelo', async () => {
