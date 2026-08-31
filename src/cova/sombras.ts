@@ -28,6 +28,11 @@ export const PREFIXO_SOMBRA = 'sombra:'
 
 export interface Sombra {
   readonly id: string
+  /**
+   * Nome do NODO. Curto a propósito: un nodo do grafo non aguanta unha
+   * frase. A frase enteira vai en `leccion` (liña temporal) e en
+   * `aviso` (panel do bebé), que si teñen sitio.
+   */
   readonly etiqueta: string
   readonly icona: string
   /** Que aprendeu, dito sen adornos. */
@@ -52,7 +57,7 @@ export const SOMBRAS: readonly Sombra[] = [
   },
   {
     id: 'garda',
-    etiqueta: 'dormir cun ollo aberto',
+    etiqueta: 'ollo aberto',
     icona: '👁',
     descricion: 'Non descansa do todo. Está pendente por se acaso.',
     limiar: 50,
@@ -61,7 +66,7 @@ export const SOMBRAS: readonly Sombra[] = [
   },
   {
     id: 'acaparar',
-    etiqueta: 'comer coma se non fose haber máis',
+    etiqueta: 'acaparar',
     icona: '🥣',
     descricion: 'Aproveita cada comida ata o final. Sáelle mellor a fame e peor todo o demais.',
     limiar: 65,
@@ -70,7 +75,7 @@ export const SOMBRAS: readonly Sombra[] = [
   },
   {
     id: 'silencio',
-    etiqueta: 'deixar de chamar',
+    etiqueta: 'non chamar',
     icona: '🤐',
     descricion: 'Xa non chora. Non porque estea ben: porque deixou de agardar que veñas.',
     limiar: 85,

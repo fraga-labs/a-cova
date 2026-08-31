@@ -43,6 +43,15 @@ export const temaCova: Theme = {
     // curtos e queremos que se lean sen achegar o zoom.
     fontSize: 15,
     fontSizeSmall: 11,
+    // Truncado de etiquetas (soporte do propio motor): por riba disto o
+    // nodo mostra `N…` e engade un `<title>` co texto completo, que o
+    // navegador ensina ao pousar o rato. O `aria-label` conserva sempre
+    // o texto enteiro, así que o lector de pantalla non perde nada.
+    //
+    // Doce porque é o que colle nun nodo sen que as etiquetas se
+    // pisen unhas ás outras. Se algún día se quere máis longo, é esta
+    // liña e nada máis.
+    maxLabelChars: 12,
   },
   typography: {
     fontFamily: "'Cascadia Mono', 'DejaVu Sans Mono', 'Courier New', monospace",
