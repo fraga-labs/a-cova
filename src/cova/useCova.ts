@@ -7,9 +7,10 @@ import { TreeEngine } from '@yggdrasil-forge/core'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   DRIVE_SPECS,
-  type DriveId,
   MOMENTOS_POR_DIA,
   MOMENTO_MS,
+  type RecursoId,
+  SOIDADE,
 } from './drives.js'
 import type { EstimuloId } from './lexico.js'
 import { menteSemente } from './mente-semente.js'
@@ -23,11 +24,13 @@ import {
   ensinarPalabra,
   esquecer,
   limparCaca,
+  medirSoidade,
   nacerMemoria,
   programarDixestion,
   reconciliarAutonomos,
   xerarConceptos,
 } from './politica.js'
+import { type Modificadores, modificadores, sombrasAcesas, xerarSombras } from './sombras.js'
 
 const MAX_ACONTECEMENTOS = 60
 
@@ -38,8 +41,8 @@ export interface Accion {
   readonly etiqueta: string
   readonly icona: string
   readonly estimulo: EstimuloId
-  /** Deltas que a acción aplica aos drives. */
-  readonly deltas: Partial<Record<DriveId, number>>
+  /** Deltas que a acción aplica aos recursos. */
+  readonly deltas: Partial<Record<RecursoId, number>>
   readonly di: string
 }
 
@@ -49,7 +52,7 @@ export const ACCIONS: readonly Accion[] = [
     etiqueta: 'ALIMENTAR',
     icona: '🍼',
     estimulo: 'fame',
-    deltas: { fame: -38, enerxia: +8 },
+    deltas: { fame: -38, enerxia: +8, soidade: -4 },
     di: 'deuslle de comer',
   },
   {
@@ -57,7 +60,7 @@ export const ACCIONS: readonly Accion[] = [
     etiqueta: 'LIMPAR',
     icona: '🧼',
     estimulo: 'auga',
-    deltas: { sucidade: -100, apego: +5 },
+    deltas: { sucidade: -100, apego: +5, soidade: -4 },
     di: 'limpáchelo',
   },
   {
@@ -65,7 +68,7 @@ export const ACCIONS: readonly Accion[] = [
     etiqueta: 'XOGAR',
     icona: '🎈',
     estimulo: 'xogo',
-    deltas: { curiosidade: +20, enerxia: -10, fame: +6, apego: +6 },
+    deltas: { curiosidade: +20, enerxia: -10, fame: +6, apego: +6, soidade: -6 },
     di: 'xogastes xuntos',
   },
   {
@@ -73,7 +76,7 @@ export const ACCIONS: readonly Accion[] = [
     etiqueta: 'ALOUMIÑAR',
     icona: '🤗',
     estimulo: 'amor',
-    deltas: { apego: +14, curiosidade: +4 },
+    deltas: { apego: +14, curiosidade: +4, soidade: -8 },
     di: 'un aloumiño',
   },
   {
@@ -81,7 +84,7 @@ export const ACCIONS: readonly Accion[] = [
     etiqueta: 'DORMIR',
     icona: '🌙',
     estimulo: 'sono',
-    deltas: { enerxia: +42, fame: +12 },
+    deltas: { enerxia: +42, fame: +12, soidade: -2 },
     di: 'botou un sono',
   },
 ]
@@ -95,6 +98,8 @@ export interface Cova {
   readonly seleccionado: string | null
   readonly di: string | null
   readonly ocupado: boolean
+  /** O que as leccións da ausencia lle cambian ao mundo. */
+  readonly mods: Modificadores
   readonly facer: (id: AccionId) => void
   readonly ensinar: (palabra: string) => void
   readonly seleccionar: (nodeId: string | null) => void
@@ -150,6 +155,13 @@ export function useCova(): Cova {
   const budget = useSyncExternalStore(subscribe, snapshot, snapshot)
   const drives = budget.resources
 
+  // As sombras acesas cambian as regras do mundo. Recalcúlanse en cada
+  // render (dependen do estado do motor, que xa é reactivo) e gárdanse
+  // nun ref para que a cola de promesas as poida ler sen esperar a React.
+  const mods = useMemo(() => modificadores(sombrasAcesas(engine)), [engine, drives])
+  const modsRef = useRef(mods)
+  modsRef.current = mods
+
   const rexistrar = useCallback((novos: readonly Acontecemento[]) => {
     if (novos.length === 0) {
       return
@@ -199,15 +211,26 @@ export function useCova(): Cova {
     const id = window.setInterval(() => {
       enfileirar(async () => {
         const t = agora()
+        const m = modsRef.current
         for (const spec of DRIVE_SPECS) {
-          if (spec.deriva !== 0) {
-            await engine.grantResource(spec.id, spec.deriva)
+          const deriva = spec.id === 'enerxia' ? spec.deriva + m.derivaEnerxia : spec.deriva
+          if (deriva !== 0) {
+            await engine.grantResource(spec.id, deriva)
           }
         }
+
+        // A conta da ausencia. Vai despois da deriva para que mida o
+        // mundo tal e como queda neste momento, non como estaba antes.
+        await engine.grantResource(SOIDADE, medirSoidade(engine.getBudget().resources, m.soidadeExtra))
         // `tick()` do motor: caduca o que teña que caducar. Hoxe non
         // usamos `timeConstraints`, pero o reloxo do corpo é o sitio
         // onde vai — non un `setTimeout` solto.
         engine.tick()
+
+        // Facer NACER as leccións da ausencia; acendelas é traballo da
+        // regra 1, coma con calquera outro nodo `auto`. Por iso aquí non
+        // se rexistra nada: senón sairía dúas veces na liña temporal.
+        await xerarSombras(engine, engine.getBudget().resources.soidade ?? 0)
 
         const feitos: Acontecemento[] = [...(await reacomodar())]
 
@@ -245,8 +268,12 @@ export function useCova(): Cova {
       }
       enfileirar(async () => {
         const t = agora()
-        for (const [drive, delta] of Object.entries(accion.deltas)) {
-          await engine.grantResource(drive, delta)
+        const m = modsRef.current
+        for (const [recurso, delta] of Object.entries(accion.deltas)) {
+          await engine.grantResource(recurso, axustar(recurso, delta, m))
+        }
+        if (id === 'alimentar' && m.sucidadeExtra > 0) {
+          await engine.grantResource('sucidade', m.sucidadeExtra)
         }
 
         const feitos: Acontecemento[] = [acontecemento('accion', accion.di, t)]
@@ -334,12 +361,40 @@ export function useCova(): Cova {
       seleccionado,
       di,
       ocupado,
+      mods,
       facer,
       ensinar,
       seleccionar: setSeleccionado,
       renomear: setNome,
     }),
-    [engine, drives, politica, acontecementos, nome, seleccionado, di, ocupado, facer, ensinar],
+    [
+      engine,
+      drives,
+      politica,
+      acontecementos,
+      nome,
+      seleccionado,
+      di,
+      ocupado,
+      mods,
+      facer,
+      ensinar,
+    ],
   )
+}
+/**
+ * Aplica as sombras a un delta dunha acción. Só toca o que unha lección
+ * da ausencia cambia de verdade: o apego que consegues dar (menos, se
+ * aprendeu a calmarse só) e o que quita a fame unha comida (máis, se
+ * come coma se non fose haber máis).
+ */
+function axustar(recurso: string, delta: number, m: Modificadores): number {
+  if (recurso === 'apego' && delta > 0) {
+    return Math.round(delta * m.gananciaApego)
+  }
+  if (recurso === 'fame' && delta < 0) {
+    return Math.round(delta * m.saciedade)
+  }
+  return delta
 }
 // ── FIN: useCova ──

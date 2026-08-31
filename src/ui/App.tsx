@@ -75,7 +75,13 @@ export function App(): JSX.Element {
           </p>
           <p>
             O principio reitor é a cova de Platón: o bebé só percibe o que ti lle proxectas. O que
-            nunca lle ensinaches, non existe.
+            nunca lle ensinaches, non existe — e o que aprende cando <em>non</em> vas tamén queda
+            escrito.
+          </p>
+          <p>
+            As «sombras» (as leccións da ausencia) <strong>non son un modelo de apego infantil</strong>{' '}
+            nin din nada sobre nenos reais. Son etiquetas nun grafo, escollidas porque fan un bo
+            bucle de xogo.
           </p>
           <button
             type="button"

@@ -126,6 +126,23 @@ o consumidor xestione o seu propio estado (é defendible; só hai que dicilo).
 
 ---
 
+## Nota — o que SI deu o motor sen pedirlle nada
+
+Convén deixar constancia tamén do contrario, porque un documento que só recolle queixas mente.
+
+Ao engadir as **sombras** (as leccións que nacen do abandono) non fixo falta nin unha liña de motor:
+
+- A rexión nova entrou con `applyChanges([{ type: 'add_group' }, …])` na mesma transacción có seu
+  primeiro nodo, e `computeLayout` recolocouno todo só.
+- A conta do abandono é un `resource` máis (`soidade`), así que os prerequisitos das leccións son
+  `resource_min` declarativos, non código escondido.
+- Acender e apagar as leccións segundo a soidade sobe e baixa **xa o facía** a regra 1 da política,
+  sen tocala: as sombras levan o tag `auto` e listo.
+- «A cicatriz apágase pero non se borra» sae de balde da distinción entre `TreeDef` (o nodo segue
+  aí) e `TreeState` (o nodo está `locked`). Non houbo que inventar un estado «cicatriz».
+
+Iso son catro pezas do contrato encaixando nunha funcionalidade que non existía cando se deseñaron.
+
 ## Nota sobre os composites do editor
 
 O TRASPASO apuntaba a usar `buildNewNode`/`buildConnect` de `@yggdrasil-forge/editor-core` para

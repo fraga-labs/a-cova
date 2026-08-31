@@ -20,9 +20,19 @@
 
 import type { TreeEngine } from '@yggdrasil-forge/core'
 import { isOk } from '@yggdrasil-forge/core'
-import { DIXESTION_MS, FUTURO_LONXANO } from './drives.js'
+import {
+  DIXESTION_MS,
+  FUTURO_LONXANO,
+  LIMIAR_APEGO_CRITICO,
+  LIMIAR_ENERXIA_CRITICA,
+  LIMIAR_FAME_CRITICA,
+  LIMIAR_SUCIDADE,
+  SOIDADE_POR_DESATENCION,
+  SOIDADE_QUE_SANDA,
+} from './drives.js'
 import { CAMPOS, type EstimuloId, camposDe, casaConEstimulo, normalizar } from './lexico.js'
 import { PREFIXO, REXIONS, TAG_AUTO } from './mente-semente.js'
+import { PREFIXO_SOMBRA, SOMBRAS } from './sombras.js'
 
 // ── Estado da política (o que o motor non ten onde gardar) ──
 
@@ -83,6 +93,7 @@ export type TipoAcontecemento =
   | 'nace-memoria'
   | 'esquece'
   | 'auto'
+  | 'sombra'
 
 export interface Acontecemento {
   readonly id: string
@@ -144,8 +155,9 @@ export async function reconciliarAutonomos(
     if (!aceso && cumpre) {
       const r = await engine.unlock(nodeDef.id)
       if (isOk(r)) {
+        const ehSombra = nodeDef.id.startsWith(PREFIXO_SOMBRA)
         feitos.push(
-          acontecemento('auto', textoAceso(nodeDef.id), agora, nodeDef.id),
+          acontecemento(ehSombra ? 'sombra' : 'auto', textoAceso(nodeDef.id), agora, nodeDef.id),
         )
       }
       continue
@@ -162,6 +174,10 @@ export async function reconciliarAutonomos(
 }
 
 function textoAceso(nodeId: string): string {
+  if (nodeId.startsWith(PREFIXO_SOMBRA)) {
+    const sombra = SOMBRAS.find((x) => `${PREFIXO_SOMBRA}${x.id}` === nodeId)
+    return sombra?.leccion ?? 'aprendeu algo da ausencia'
+  }
   switch (nodeId) {
     case 'caca':
       return 'caca!'
@@ -463,6 +479,32 @@ export async function esquecer(
   }
 
   return { frescuras: seguintes, acontecementos: feitos }
+}
+
+// ── A conta da ausencia ──
+
+/**
+ * Canto sobe (ou baixa) a soidade neste momento. Unha necesidade
+ * crítica sen atender suma; un momento no que todo está ben resta —
+ * pero moito menos. Aprender a estar só é rápido, desaprendelo non.
+ *
+ * Puro: recibe os drives, devolve un número. Fácil de probar e de tocar.
+ */
+export function medirSoidade(
+  drives: Readonly<Record<string, number>>,
+  extra = 0,
+): number {
+  const criticas = [
+    (drives.fame ?? 0) >= LIMIAR_FAME_CRITICA,
+    (drives.sucidade ?? 0) >= LIMIAR_SUCIDADE,
+    (drives.apego ?? 100) <= LIMIAR_APEGO_CRITICO,
+    (drives.enerxia ?? 100) <= LIMIAR_ENERXIA_CRITICA,
+  ].filter(Boolean).length
+
+  if (criticas === 0) {
+    return -SOIDADE_QUE_SANDA
+  }
+  return criticas * SOIDADE_POR_DESATENCION + extra
 }
 
 // ── A dixestión: programar a caca ──

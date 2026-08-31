@@ -10,6 +10,10 @@ cova, e dicímolo.
 > **O honesto, por diante.** Isto non é consciencia nin AGI: é a estrutura dunha mente-rexistro,
 > sombras e relacións entre sombras. A semántica do bebé non ten grounding: «auga» é un nodo
 > conectado a estímulos, non auga. Dise aquí e dise tamén na propia páxina do proxecto.
+>
+> As «sombras» (o que aprende cando o desatendes) **non son un modelo de apego infantil** nin
+> pretenden dicir nada sobre nenos reais. Son etiquetas nun grafo, escollidas porque fan un bo
+> bucle de xogo.
 
 ---
 
@@ -45,6 +49,11 @@ unha mente medrada en runtime.
   require (`all`). A mente gaña un piso.
 - **Esquecemento** — as palabras teñen frescura que decae; sen reforzo baixan un rango, e ao final
   pérdense.
+- **As sombras** — o que aprende cando **non** vas. Unha `soidade` acumúlase por cada necesidade
+  crítica sen atender e fai nacer leccións de supervivencia nunha rexión propia: *calmarse só*,
+  *dormir cun ollo aberto*, *comer coma se non fose haber máis*, *deixar de chamar*. Non son
+  castigos: cada unha dá algo e quita algo. Coidalo apágaas, pero **o nodo queda na mente para
+  sempre** e viaxa no documento exportado.
 - **A cara** — bebé + accións á esquerda, **a mente en vivo** (SkillTree) á dereita, acontecementos
   con horas reais abaixo.
 - **EXPORTAR BEBÉ** — descarga un documento Yggdrasil válido que abre no
@@ -63,6 +72,7 @@ consumidores.
 | `src/cova/mente-semente.ts` | A mente coa que nace: 13 nodos en 5 rexións. Documento válido desde o día un. |
 | `src/cova/politica.ts` | **O corazón novo.** As 5 regras de crecemento. Puro respecto de React; testado. |
 | `src/cova/lexico.ts` | A táboa de estímulos e campos semánticos. Está á vista a propósito. |
+| `src/cova/sombras.ts` | As leccións da ausencia e o que lle cambian ao mundo. |
 | `src/cova/drives.ts` | Os 5 drives, os limiares e as constantes do reloxo. |
 | `src/cova/useCova.ts` | O cableado: motor + reloxo + política + React. |
 | `src/cova/exportar.ts` | Exportar bebé como documento Yggdrasil. |
@@ -87,6 +97,9 @@ Ademais, tres decisións de deseño que non estaban no doc e que se toman aquí:
   se ve. Cada rexión leva a súa áncora.
 - **A promesa `+ máis`** existe como nodo real que nunca se desbloquea — a affordance de crecemento
   visible NO grafo, como no mockup.
+- **Unha sexta rexión, SOMBRA**, que non está na semente: o seu grupo nace coa primeira lección da
+  ausencia. Un bebé ben coidado nunca chega a ver ese chip. E a `soidade` é un `resource` do
+  documento sen barra na UI — o coidador non a manexa, sófrea.
 
 ## O que falta (seguintes quendas)
 

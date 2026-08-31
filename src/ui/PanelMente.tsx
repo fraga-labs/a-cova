@@ -15,12 +15,26 @@ const ORDE_REXIONS: readonly RexionId[] = [
   REXIONS.afectos,
   REXIONS.conceptos,
   REXIONS.memorias,
+  REXIONS.sombra,
 ]
 
 export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
   const arbore = useRef<SkillTreeHandle>(null)
   const [zoom, setZoom] = useState(100)
-  const [rexionsVisibles, setRexionsVisibles] = useState<readonly RexionId[]>(ORDE_REXIONS)
+  const [agochadas, setAgochadas] = useState<readonly RexionId[]>([])
+
+  // As rexións que EXISTEN no documento, non as que imaxinamos: a SOMBRA
+  // só aparece se o bebé chegou a aprender algo da ausencia. Un bebé ben
+  // coidado nunca ve ese chip.
+  const rexions = useMemo(() => {
+    const declaradas = new Set((cova.engine.getTreeDef().groups ?? []).map((g) => g.id))
+    return ORDE_REXIONS.filter((r) => declaradas.has(r))
+  }, [cova.engine, cova.acontecementos])
+
+  const rexionsVisibles = useMemo(
+    () => rexions.filter((r) => !agochadas.includes(r)),
+    [rexions, agochadas],
+  )
 
   const regions = useMemo(
     () =>
@@ -57,7 +71,7 @@ export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
       </header>
 
       <div className="chips" role="group" aria-label="Rexións da mente">
-        {ORDE_REXIONS.map((r) => {
+        {rexions.map((r) => {
           const activa = rexionsVisibles.includes(r)
           return (
             <button
@@ -67,7 +81,7 @@ export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
               style={{ borderColor: COR_REXION[r], color: activa ? '#16100d' : COR_REXION[r], background: activa ? COR_REXION[r] : 'transparent' }}
               aria-pressed={activa}
               onClick={() => {
-                setRexionsVisibles((v) => (v.includes(r) ? v.filter((x) => x !== r) : [...v, r]))
+                setAgochadas((v) => (v.includes(r) ? v.filter((x) => x !== r) : [...v, r]))
               }}
             >
               {ETIQUETA_REXION[r]}

@@ -22,6 +22,7 @@ const ICONA: Readonly<Record<Acontecemento['tipo'], string>> = {
   'nace-memoria': '★',
   esquece: '…',
   auto: '⚡',
+  sombra: '🕳',
 }
 
 export function Acontecementos({ cova }: { readonly cova: Cova }): JSX.Element {

@@ -809,3 +809,21 @@ body {
   background: var(--acento);
   transition: width 400ms linear;
 }
+
+/* o que aprendeu da ausencia */
+
+.sombras {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 6px 8px;
+  border-left: 3px solid #8a8f9c;
+  background: rgb(138 143 156 / 8%);
+  color: #b9bdc7;
+  list-style: none;
+}
+
+.sombras li {
+  animation: entrar 320ms ease-out both;
+}

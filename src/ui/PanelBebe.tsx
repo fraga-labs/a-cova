@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { DRIVE_SPECS, LIMIAR_SUCIDADE } from '../cova/drives.js'
 import { ESTIMULOS } from '../cova/lexico.js'
 import { DURACION_ESTIMULO, idPalabra } from '../cova/politica.js'
+import { sombrasAcesas } from '../cova/sombras.js'
 import { ACCIONS, type Cova } from '../cova/useCova.js'
 import { Bebe } from './Bebe.js'
 
@@ -33,6 +34,7 @@ export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
       : (cova.engine.getNodeState(idPalabra(palabraAmostra))?.currentTier ?? 0)
 
   const estimulo = ESTIMULOS[cova.politica.estimulo]
+  const sombras = sombrasAcesas(cova.engine)
 
   function ensinar(): void {
     const p = borrador.trim()
@@ -89,8 +91,20 @@ export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
       ) : null}
       {temMalestar ? (
         <p className="alerta alerta--forte" role="status">
-          Chora. Leva demasiado tempo sucio e o apego vai baixando.
+          {cova.mods.cala
+            ? 'Está incómodo e non chora. Deixou de agardar que veñas.'
+            : 'Chora. Leva demasiado tempo sucio e o apego vai baixando.'}
         </p>
+      ) : null}
+
+      {sombras.length > 0 ? (
+        <ul className="sombras" aria-label="O que aprendeu da ausencia">
+          {sombras.map((s) => (
+            <li key={s.id}>
+              <span aria-hidden="true">{s.icona}</span> {s.aviso}
+            </li>
+          ))}
+        </ul>
       ) : null}
 
       <h2 className="titulo">QUE QUERES FACER?</h2>

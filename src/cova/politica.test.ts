@@ -46,13 +46,16 @@ describe('a mente semente', () => {
     }
   })
 
-  it('arranca cos cinco drives no seu valor inicial', () => {
+  it('arranca cos cinco drives no seu valor inicial, e sen soidade', () => {
     const e = motor()
     const b = e.getBudget().resources
     expect(Object.keys(b).sort()).toEqual(
-      ['apego', 'curiosidade', 'enerxia', 'fame', 'sucidade'].sort(),
+      ['apego', 'curiosidade', 'enerxia', 'fame', 'sucidade', 'soidade'].sort(),
     )
     expect(b.sucidade).toBe(8)
+    // A soidade é un recurso do documento, pero non un drive: non ten
+    // barra, e ao nacer está a cero. Ninguén o deixou só aínda.
+    expect(b.soidade).toBe(0)
   })
 })
 

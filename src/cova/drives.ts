@@ -8,6 +8,18 @@ export const DRIVES = ['fame', 'enerxia', 'sucidade', 'apego', 'curiosidade'] as
 
 export type DriveId = (typeof DRIVES)[number]
 
+/**
+ * A SOIDADE non é un drive: non ten barra nin o coidador a manexa.
+ * É a conta do que non se atendeu. Sobe cando unha necesidade queda sen
+ * cubrir e baixa amodo cando si. É un `resource` do documento coma os
+ * demais — para que os prerequisitos das sombras se poidan escribir de
+ * forma declarativa (`resource_min`) e non como código escondido.
+ */
+export const SOIDADE = 'soidade' as const
+
+/** Todo o que o motor leva como `resource`: os cinco drives máis a soidade. */
+export type RecursoId = DriveId | typeof SOIDADE
+
 export interface DriveSpec {
   readonly id: DriveId
   readonly etiqueta: string
@@ -49,6 +61,25 @@ export const LIMIAR_LEDICIA = 80
 
 /** Limiar por debaixo do cal aparece a tristura. Espellado no prereq (`none`). */
 export const LIMIAR_TRISTURA = 30
+
+/** Por riba disto, a fame xa non é fame: é desamparo. */
+export const LIMIAR_FAME_CRITICA = 90
+
+/** Por debaixo disto, o apego é abandono. */
+export const LIMIAR_APEGO_CRITICO = 15
+
+/** Por debaixo disto, non descansou. */
+export const LIMIAR_ENERXIA_CRITICA = 10
+
+/** Canto sobe a soidade por cada necesidade crítica sen atender, cada momento. */
+export const SOIDADE_POR_DESATENCION = 3
+
+/**
+ * Canto baixa a soidade nun momento en que todo está ben.
+ * Un terzo do que sobe: aprender a estar só é rápido, desaprendelo non.
+ * Esa asimetría é a mecánica; non fai falta ningunha histérese no motor.
+ */
+export const SOIDADE_QUE_SANDA = 1
 
 export const DRIVE_SPECS: readonly DriveSpec[] = [
   {

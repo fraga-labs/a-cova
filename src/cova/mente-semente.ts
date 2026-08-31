@@ -13,6 +13,7 @@ import type { NodeDef, TreeDef } from '@yggdrasil-forge/core'
 import {
   DRIVE_SPECS,
   FUTURO_LONXANO,
+  SOIDADE,
   LIMIAR_LEDICIA,
   LIMIAR_SUCIDADE,
   LIMIAR_TRISTURA,
@@ -25,6 +26,10 @@ export const REXIONS = {
   afectos: 'afectos',
   conceptos: 'conceptos',
   memorias: 'memorias',
+  // A SOMBRA non ten nodos na semente e o seu grupo tampouco se declara
+  // aquí: nace coa primeira leccion da ausencia (ver sombras.ts). Un bebe
+  // ben coidado nunca chega a ver esta rexion.
+  sombra: 'sombra',
 } as const
 
 export type RexionId = (typeof REXIONS)[keyof typeof REXIONS]
@@ -35,6 +40,7 @@ export const COR_REXION: Record<RexionId, string> = {
   afectos: '#e07aa8',
   conceptos: '#6fbf73',
   memorias: '#5aa9e0',
+  sombra: '#8a8f9c',
 }
 
 export const ETIQUETA_REXION: Record<RexionId, string> = {
@@ -43,6 +49,7 @@ export const ETIQUETA_REXION: Record<RexionId, string> = {
   afectos: 'AFECTOS',
   conceptos: 'CONCEPTOS',
   memorias: 'MEMORIAS',
+  sombra: 'SOMBRA',
 }
 
 /**
@@ -248,16 +255,30 @@ export function menteSemente(): TreeDef {
       meshType: 'spokes',
       curve: 'radial',
     },
-    resources: DRIVE_SPECS.map((d) => ({
-      id: d.id,
-      label: { gl: d.etiqueta },
-      icon: d.icona,
-      color: d.cor,
-      initial: d.inicial,
-      max: 100,
-    })),
+    resources: [
+      ...DRIVE_SPECS.map((d) => ({
+        id: d.id,
+        label: { gl: d.etiqueta },
+        icon: d.icona,
+        color: d.cor,
+        initial: d.inicial,
+        max: 100,
+      })),
+      {
+        // Sen barra na UI a propósito: o coidador non manexa isto, sofreo.
+        id: SOIDADE,
+        label: { gl: 'soidade' },
+        icon: '🕳',
+        color: '#8a8f9c',
+        initial: 0,
+        max: 100,
+      },
+    ],
     startingBudget: {
-      resources: Object.fromEntries(DRIVE_SPECS.map((d) => [d.id, d.inicial])),
+      resources: {
+        ...Object.fromEntries(DRIVE_SPECS.map((d) => [d.id, d.inicial])),
+        [SOIDADE]: 0,
+      },
     },
     groups: [
       {
