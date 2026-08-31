@@ -57,8 +57,12 @@ export const ESTADO_INICIAL: EstadoPolitica = {
   ditas: [],
 }
 
-/** Momentos que dura un estímulo activo tras unha acción do coidador. */
-export const DURACION_ESTIMULO = 4
+/**
+ * Momentos que dura un estímulo activo tras unha acción do coidador.
+ * Oito (uns 32 s) porque o coidador ten que escribir a palabra: con
+ * catro chegaba tarde sempre e a regra do contexto parecía rota.
+ */
+export const DURACION_ESTIMULO = 8
 
 /** Canto decae a frescura dunha palabra por momento. */
 export const DECAEMENTO = 4

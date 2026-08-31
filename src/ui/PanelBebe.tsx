@@ -6,7 +6,7 @@ import type { JSX } from 'react'
 import { useState } from 'react'
 import { DRIVE_SPECS, LIMIAR_SUCIDADE } from '../cova/drives.js'
 import { ESTIMULOS } from '../cova/lexico.js'
-import { idPalabra } from '../cova/politica.js'
+import { DURACION_ESTIMULO, idPalabra } from '../cova/politica.js'
 import { ACCIONS, type Cova } from '../cova/useCova.js'
 import { Bebe } from './Bebe.js'
 
@@ -127,6 +127,12 @@ export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
         )}
       </p>
 
+      {/* Canto lle queda ao contexto. Sen isto a regra parece rota:
+          o coidador escribe, chega tarde e non entende por que. */}
+      <span className="contexto__reloxo" aria-hidden="true">
+        <span className="contexto__queda" style={{ width: `${restanteContexto(cova)}%` }} />
+      </span>
+
       <div className="ensinar">
         <label className="visualmente-oculto" htmlFor="palabra">
           Palabra que lle queres ensinar
@@ -166,12 +172,28 @@ export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
             </span>
             <span className="tier__etiqueta">
               {t.etiqueta}
-              {t.n === 3 && tierAmostra >= 3 ? ' ★' : ''}
+              {t.n === 3 && tierAmostra >= 3 ? (
+                <>
+                  {' '}
+                  <span className="tier__estrela" key={palabraAmostra ?? ''}>
+                    ★
+                  </span>
+                </>
+              ) : null}
             </span>
           </li>
         ))}
       </ul>
     </section>
   )
+}
+
+/** Porcentaxe que lle queda ao estímulo activo. 0 = fóra de contexto. */
+function restanteContexto(cova: Cova): number {
+  const quedan = cova.politica.estimuloAte - cova.politica.momentos
+  if (cova.politica.estimulo === 'nada' || quedan <= 0) {
+    return 0
+  }
+  return Math.min(100, Math.round((quedan / DURACION_ESTIMULO) * 100))
 }
 // ── FIN: o panel do bebé ──

@@ -76,6 +76,8 @@ export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
         })}
       </div>
 
+      <UltimoAceso cova={cova} />
+
       <div className="mente__lenzo">
         <SkillTree
           ref={arbore}
@@ -120,6 +122,31 @@ export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
       <Detalle cova={cova} />
     </section>
   )
+}
+
+/**
+ * Fai latexar o nodo do último acontecemento. O `<g>` de cada nodo xa leva
+ * o seu `transform` do layout, así que a animación só toca opacidade e
+ * sombra — nunca `transform`, que movería o nodo do seu sitio.
+ *
+ * A `key` é o id do acontecemento: ao cambiar, o `<style>` desmóntase e
+ * vólvese montar, e a animación arranca de novo. Sen `key` só se vería a
+ * primeira vez.
+ */
+function UltimoAceso({ cova }: { readonly cova: Cova }): JSX.Element | null {
+  const ultimo = cova.acontecementos[0]
+  if (ultimo?.nodeId === undefined) {
+    return null
+  }
+  const selector = `.mente__lenzo .yf-skill-node[data-node-id="${cssEscape(ultimo.nodeId)}"]`
+  return (
+    <style key={ultimo.id}>{`${selector} { animation: nacer 800ms ease-out 2; }`}</style>
+  )
+}
+
+/** Escapa comiñas e barras nun id que vai dentro dun selector CSS. */
+function cssEscape(id: string): string {
+  return id.replace(/["\\]/g, '\\$&')
 }
 
 function contarNodos(cova: Cova): { total: number; acesos: number } {

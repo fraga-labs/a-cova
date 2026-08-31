@@ -564,3 +564,248 @@ body {
 }
 
 /* ── FIN: estilos da Cova ── */
+
+/* ── INICIO: vidiña ──
+   Animacións baratas e curtas. Nada que compita coa mente en vivo: o
+   protagonismo é do grafo. Todo se apaga con `prefers-reduced-motion`. */
+
+@keyframes respirar {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.35px);
+  }
+}
+
+@keyframes tremelar {
+  0%,
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  35% {
+    transform: scaleY(1.35);
+    opacity: 0.85;
+  }
+  70% {
+    transform: scaleY(0.8);
+    opacity: 1;
+  }
+}
+
+@keyframes lumear {
+  0%,
+  100% {
+    opacity: 0.06;
+  }
+  50% {
+    opacity: 0.14;
+  }
+}
+
+@keyframes abanear {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes chimpar {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes durmiñar {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(2px, -3px);
+    opacity: 0;
+  }
+}
+
+@keyframes entrar {
+  from {
+    transform: translateX(-6px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes latexar {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.78;
+  }
+}
+
+@keyframes nacer {
+  0% {
+    opacity: 0.25;
+    filter: drop-shadow(0 0 0 rgb(240 230 210 / 0%));
+  }
+  45% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgb(240 230 210 / 85%));
+  }
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 0 rgb(240 230 210 / 0%));
+  }
+}
+
+@keyframes alarmar {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes estrelar {
+  0% {
+    transform: scale(0.2) rotate(-40deg);
+  }
+  70% {
+    transform: scale(1.4) rotate(8deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* o bebé */
+
+.respira {
+  animation: respirar 3.4s ease-in-out infinite;
+}
+
+.respira--fonda {
+  animation-duration: 5.2s;
+}
+
+.chama {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: tremelar 0.9s ease-in-out infinite;
+}
+
+.chama--alta {
+  animation-duration: 0.6s;
+  animation-delay: 0.15s;
+}
+
+.lume {
+  animation: lumear 1.8s ease-in-out infinite;
+}
+
+.planta {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: abanear 5s ease-in-out infinite;
+}
+
+.bocadillo {
+  transform-box: fill-box;
+  transform-origin: 20% 90%;
+  animation: chimpar 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.zzz {
+  animation: durmiñar 2.4s ease-out infinite;
+}
+
+/* a alerta e as barras */
+
+.alerta {
+  animation: entrar 260ms ease-out both;
+}
+
+.drive--alarma .drive__icona {
+  animation: alarmar 1.2s ease-in-out infinite;
+}
+
+/* os tiers */
+
+.tier__estrela {
+  display: inline-block;
+  animation: estrelar 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* a liña temporal: só o que acaba de entrar se move */
+
+.liña-temporal li {
+  animation: entrar 300ms ease-out both;
+}
+
+/* a mente: o que xa está no máximo latexa moi de vagar */
+
+.mente__lenzo :where(.yf-skill-node[data-state='maxed']) {
+  animation: latexar 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .respira,
+  .chama,
+  .lume,
+  .planta,
+  .bocadillo,
+  .zzz,
+  .alerta,
+  .drive--alarma .drive__icona,
+  .tier__estrela,
+  .liña-temporal li,
+  .mente__lenzo :where(.yf-skill-node),
+  .mente__lenzo :where(.yf-skill-node[data-state='maxed']) {
+    animation: none !important;
+  }
+
+  .drive__cheo,
+  .tier__cheo {
+    transition: none !important;
+  }
+}
+/* ── FIN: vidiña ── */
+
+/* o reloxo do contexto */
+
+.contexto__reloxo {
+  display: block;
+  height: 3px;
+  background: var(--fondo-fondo);
+}
+
+.contexto__queda {
+  display: block;
+  height: 100%;
+  background: var(--acento);
+  transition: width 400ms linear;
+}

@@ -126,10 +126,19 @@ export function useCova(): Cova {
   const [seleccionado, setSeleccionado] = useState<string | null>(null)
   const [di, setDi] = useState<string | null>(null)
 
-  // Espello síncrono da política: permite lela dentro do intervalo do
-  // reloxo sen ter que re-crear o intervalo en cada cambio de estado.
+  // A política ten DÚAS caras: o `ref` é a fonte de verdade (síncrona) e o
+  // `state` existe só para pintar. Isto non é un espello por comodidade —
+  // é necesario: as accións corren nunha cola de promesas, e dúas
+  // seguidas execútanse antes de que React chegue a renderizar. Se a cola
+  // lese o state, a segunda acción vería o mundo anterior á primeira
+  // (e, por exemplo, ensinar xusto despois de alimentar diría «fóra de
+  // contexto» cando si estaba en contexto).
   const politicaRef = useRef(politica)
-  politicaRef.current = politica
+
+  const mudarPolitica = useCallback((fn: (p: EstadoPolitica) => EstadoPolitica): void => {
+    politicaRef.current = fn(politicaRef.current)
+    setPolitica(politicaRef.current)
+  }, [])
 
   // Un só carril de mutación: as accións son async (o motor tamén) e
   // dúas á vez deixarían o estado a medias. `ocupado` é a porta.
@@ -202,18 +211,21 @@ export function useCova(): Cova {
 
         const feitos: Acontecemento[] = [...(await reacomodar())]
 
-        setPolitica((p) => {
-          const momentos = p.momentos + 1
-          const dia = Math.floor(momentos / MOMENTOS_POR_DIA) + 1
-          if (dia !== p.dia) {
-            feitos.push(acontecemento('dia', `amenceu o día ${dia}`, t))
-          }
-          const estimulo = momentos >= p.estimuloAte ? 'nada' : p.estimulo
-          return { ...p, momentos, dia, estimulo }
-        })
+        // O avance do reloxo calcúlase FÓRA do updater: un `feitos.push`
+        // dentro del correría no render seguinte, é dicir despois do
+        // `rexistrar(feitos)` de máis abaixo, e o «amenceu o día N»
+        // perderíase. O `ref` é sempre a política vixente.
+        const previa = politicaRef.current
+        const momentos = previa.momentos + 1
+        const dia = Math.floor(momentos / MOMENTOS_POR_DIA) + 1
+        if (dia !== previa.dia) {
+          feitos.push(acontecemento('dia', `amenceu o día ${dia}`, t))
+        }
+        const estimulo = momentos >= previa.estimuloAte ? 'nada' : previa.estimulo
+        mudarPolitica((p) => ({ ...p, momentos, dia, estimulo }))
 
         const olvido = await esquecer(engine, politicaRef.current.frescuras, t)
-        setPolitica((p) => ({ ...p, frescuras: olvido.frescuras }))
+        mudarPolitica((p) => ({ ...p, frescuras: olvido.frescuras }))
         feitos.push(...olvido.acontecementos)
 
         rexistrar(feitos)
@@ -222,7 +234,7 @@ export function useCova(): Cova {
     return () => {
       window.clearInterval(id)
     }
-  }, [engine, enfileirar, reacomodar, rexistrar])
+  }, [engine, enfileirar, mudarPolitica, reacomodar, rexistrar])
 
   // ── Accións do coidador ──
   const facer = useCallback(
@@ -253,7 +265,7 @@ export function useCova(): Cova {
 
         feitos.push(...(await reacomodar()))
 
-        setPolitica((p) => ({
+        mudarPolitica((p) => ({
           ...p,
           estimulo: accion.estimulo,
           estimuloAte: p.momentos + DURACION_ESTIMULO,
@@ -261,7 +273,7 @@ export function useCova(): Cova {
         rexistrar(feitos)
       })
     },
-    [engine, enfileirar, reacomodar, rexistrar],
+    [engine, enfileirar, mudarPolitica, reacomodar, rexistrar],
   )
 
   const ensinar = useCallback(
@@ -293,12 +305,12 @@ export function useCova(): Cova {
         }
 
         feitos.push(...(await reacomodar()))
-        setPolitica((p) => ({ ...p, frescuras: r.frescuras, ditas: r.ditas }))
+        mudarPolitica((p) => ({ ...p, frescuras: r.frescuras, ditas: r.ditas }))
         setSeleccionado(r.nodeId)
         rexistrar(feitos)
       })
     },
-    [engine, enfileirar, reacomodar, rexistrar],
+    [engine, enfileirar, mudarPolitica, reacomodar, rexistrar],
   )
 
   // ── Gardado ──
