@@ -33,7 +33,48 @@ npm run verificar
 
 `verificar` fai as tres cousas que teñen que estar ben antes de entregar: tipos (`tsc`), probas
 (`vitest`) e **validación do documento co CLI real** (`ygg validate`) — tanto a mente semente como
-unha mente medrada en runtime.
+unha mente medrada en runtime (esa escríbea a proba de exportar, por iso vai despois de `test`).
+
+Para ver o resultado do `build` tal e como o vería outra persoa:
+
+```bash
+npm run build && npm run preview
+```
+
+## Non leva IA. Nin unha liña.
+
+Pregunta lexítima, porque o proxecto fala de mentes: **A Cova non usa ningún modelo de linguaxe,
+nin chama a ningún servizo, nin ten clave de API**. Todo o que fai o bebé sae de regras
+deterministas que podes ler en dous ficheiros: `src/cova/politica.ts` (as regras) e
+`src/cova/lexico.ts` (a táboa de que palabra casa con que estímulo). Se non entende «auga» é porque
+«auga» non está nesa táboa, non porque un modelo decidise nada.
+
+Comprobable: as dependencias de execución son React e tres paquetes de Yggdrasil Forge, e no código
+non hai nin un `fetch`. O único `fetch` do bundle construído é o *modulepreload* que mete Vite para
+cargar os seus propios ficheiros.
+
+A fase B do plan **si** contempla un LLM («a imaxinación»: o bebé matina, un modelo propón un nodo
+en JSON, valídase contra o schema e só se enxerta o san). **Non está feita**, e cando se faga terá
+que ser opcional e dicilo na cara.
+
+## Pasarllo a outra persoa
+
+A app é **estática**: `npm run build` deixa en `dist/` tres ficheiros (un HTML, un JS, un CSS, ~460
+kB) con rutas relativas. Non hai servidor, nin base de datos, nin contas, nin nada que saia do
+navegador. Vale calquera sitio que sirva ficheiros.
+
+**O camiño curto — GitHub Pages.** O repo xa trae `.github/workflows/pages.yml`. Despois de subilo
+a GitHub, en *Settings → Pages* escolle **Source: GitHub Actions** e cada `push` a `main` publica
+soa. O workflow corre `npm run verificar` antes: se a mente semente deixase de ser un documento
+Yggdrasil válido, non se publica.
+
+**Que ve a outra persoa**: a súa propia cova, en branco. O bebé vive no `localStorage` do SEU
+navegador — non hai bebés compartidos nin nada que chegue a ti. Cada quen cría o seu.
+
+**Compartir un bebé concreto** é outra cousa e xa funciona: **EXPORTAR BEBÉ** descarga un `.json`
+que é un documento Yggdrasil válido. Quen o reciba pode abrilo no
+[editor público](https://fraga-labs.github.io/yggdrasil-forge/app/) e ver a mente enteira —
+que palabras aprendeu, que conceptos naceron, e que leccións lle deixou a ausencia.
 
 ## Que hai feito (fase A, sen LLM)
 

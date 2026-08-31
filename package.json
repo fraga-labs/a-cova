@@ -14,8 +14,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "mente:json": "node scripts/mente-a-json.mjs",
-    "mente:validate": "node scripts/mente-a-json.mjs --out .tmp/mente-semente.json && ygg validate .tmp/mente-semente.json && ygg validate .tmp/bebe-medrado.json",
-    "verificar": "npm run typecheck && npm run test && npm run mente:validate"
+    "mente:validate": "node scripts/mente-a-json.mjs --out .tmp/mente-semente.json && ygg validate .tmp/mente-semente.json",
+    "verificar": "npm run typecheck && npm run test && npm run mente:validate && npm run bebe:validate",
+    "bebe:validate": "ygg validate .tmp/bebe-medrado.json"
   },
   "dependencies": {
     "@yggdrasil-forge/common": "^1.0.0",

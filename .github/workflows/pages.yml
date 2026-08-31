@@ -1,0 +1,56 @@
+# Publica A Cova en GitHub Pages.
+#
+# Non se activa ata que o repo teña remoto e Pages estea posto en
+# «GitHub Actions» (Settings → Pages → Source). Non fai falta ningún
+# segredo: a app é estática e non fala con ninguén.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Só o mínimo: ler o código e publicar a páxina.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Se se empurran dous commits seguidos, publícase o último e xa.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # A mesma porta que se usa en local: tipos, probas e o documento
+      # validado co CLI real. Se a mente semente deixase de ser un
+      # documento Yggdrasil válido, isto non se publica.
+      - run: npm run verificar
+
+      - run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despregue.outputs.page_url }}
+    steps:
+      - id: despregue
+        uses: actions/deploy-pages@v4
