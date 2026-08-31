@@ -1,11 +1,12 @@
 // ── INICIO: o bebé ──
 // Arte PLACEHOLDER, declarada como tal: pixel-art xerado dunha grella de
-// texto (edítase como un debuxo). O pixel-art fino do mockup vén despois.
+// texto. O pixel-art fino do mockup vén despois.
 //
-// As animacións son deliberadamente baratas: respiración e pestanexo do
-// bebé, lume que tremela, planta que abanea e o bocadillo que aparece
-// dun chimpo. Todo CSS agás o pestanexo, que precisa cambiar de debuxo.
-// Con `prefers-reduced-motion` queda todo quieto (ver styles.css).
+// A cara NON se debuxa enteira por cada estado de ánimo: iso serían oito
+// grellas case idénticas e imposibles de manter aliñadas. Hai un corpo
+// base con dous ocos —a fila dos ollos e a fila da boca— e cada
+// expresión enche eses dous ocos. Engadir unha cara nova é escribir dúas
+// liñas de texto.
 
 import type { JSX } from 'react'
 import { useEffect, useState } from 'react'
@@ -17,52 +18,136 @@ const PALETA: Readonly<Record<string, string>> = {
   o: '#f6dcc4', // brillo
   h: '#8a6a4a', // cornos
   e: '#2b1d16', // ollos
+  w: '#fdfdfd', // brillo do ollo
   b: '#e79ab8', // meixelas
   m: '#8a4a4a', // boca
+  d: '#6b5b50', // ollo apagado
+  r: '#c94a4a', // lingua
+  a: '#7fc4e8', // bágoa
   c: '#7a5a3a', // cueiro
 }
 
-/** 16 columnas × 16 filas. Le como un debuxo, edítase como un debuxo. */
-const DESPERTO = [
+/**
+ * Corpo base, 16×16. Catro ocos que enche a expresión:
+ *   `1` `2` as dúas filas dos ollos · `3` `4` as dúas filas da boca.
+ *
+ * Ollos e boca ocupan DÚAS filas cada un a propósito. Cunha soa, a cara
+ * quedaba de vaca de Minecraft: os ollos non tiñan mirada e o sorriso
+ * líase como un buraco rectangular. Con dúas, a boca pode curvarse
+ * (comisuras arriba = sorriso, abaixo = pena) e o ollo ten pupila e
+ * brillo. A cabeza leva as esquinas recortadas para non ser un caixón.
+ */
+const CORPO = [
   '................',
   '..h..........h..',
   '..hhkkkkkkkkhh..',
   '...kppppppppk...',
-  '...kpoppppopk...',
-  '...kpeppppepk...',
+  '...1111111111...',
+  '...2222222222...',
   '...kppppppppk...',
-  '...kpbppppbpk...',
-  '...kpppmmpppk...',
+  '...3333333333...',
+  '...4444444444...',
   '....kkkkkkkk....',
   '...pkppppppkp...',
+  '....kpoooopk....',
   '....kppppppk....',
-  '....kcccccck....',
+  '....kpccccpk....',
   '....kcccccck....',
   '.....kk..kk.....',
-  '................',
 ]
 
-/** Mesmo debuxo cos ollos unha fila máis abaixo: le como un pestanexo. */
-const PESTANEXO = [
-  ...DESPERTO.slice(0, 5),
-  '...kppppppppk...',
-  '...kpeppppepk...',
-  ...DESPERTO.slice(7),
-]
+export type Expresion =
+  | 'tranquilo'
+  | 'contento'
+  | 'triste'
+  | 'famento'
+  | 'durmido'
+  | 'falando'
+  | 'apagado'
+  | 'pestanexo'
 
-/** Ollos pechados en arco e boca pequena: dorme. */
-const DURMIDO = [
-  ...DESPERTO.slice(0, 5),
-  '...kpkppppkpk...',
-  '...kppppppppk...',
-  '...kpbppppbpk...',
-  '...kppppmpppk...',
-  ...DESPERTO.slice(9),
-]
+// As catro filas variables. Sempre 10 caracteres: o 0 e o 9 son o
+// contorno da cabeza, e os oito do medio son o oco.
+//
+//   índice  0 1 2 3 4 5 6 7 8 9
+//           k . O O . . O O . k     ← ollos no 2-3 e no 6-7
+//           k b . m m m m . b k     ← boca no 3..6, meixelas no 1 e 8
+//
+// Se algunha fila non mide 10, `normalizar` córtaa: mellor unha cara
+// rara ca un debuxo torto.
 
-function Grella({ filas }: { readonly filas: readonly string[] }): JSX.Element {
+/** Fila de ARRIBA dos ollos. */
+const OLLOS_ARRIBA: Record<Expresion, string> = {
+  tranquilo: 'kpewppewpk', // pupila + brillo arriba á dereita
+  contento: 'kppppppppk', // pechados de gusto
+  triste: 'kppppppppk', // caídos: só ocupan a fila de abaixo
+  famento: 'kpewppewpk',
+  durmido: 'kppppppppk',
+  falando: 'kpewppewpk',
+  apagado: 'kppppppppk',
+  pestanexo: 'kppppppppk',
+}
+
+/** Fila de ABAIXO dos ollos. */
+const OLLOS_ABAIXO: Record<Expresion, string> = {
+  tranquilo: 'kpeeppeepk',
+  contento: 'kpkkppkkpk', // dúas raias: os ollos apertados de rir
+  triste: 'kpeeppeepk',
+  famento: 'kpeeppeepk',
+  durmido: 'kpkkppkkpk',
+  falando: 'kpeeppeepk',
+  apagado: 'kpddppddpk', // sen brillo ningún
+  pestanexo: 'kpkkppkkpk',
+}
+
+/** Fila de ARRIBA da boca: aquí van as comisuras e as meixelas. */
+const BOCAS_ARRIBA: Record<Expresion, string> = {
+  tranquilo: 'kppppppppk',
+  contento: 'kbpmppmpbk', // comisuras arriba → sorriso
+  triste: 'kpppmmpppk', // centro arriba → pena
+  famento: 'kppmrrmppk',
+  durmido: 'kppppppppk',
+  falando: 'kbpmrrmpbk',
+  apagado: 'kppmmmmppk', // unha raia recta. Nin sorriso nin pena.
+  pestanexo: 'kppppppppk',
+}
+
+/** Fila de ABAIXO da boca. */
+const BOCAS_ABAIXO: Record<Expresion, string> = {
+  tranquilo: 'kpppmmpppk',
+  contento: 'kppmmmmppk',
+  triste: 'kppmppmppk', // comisuras abaixo
+  famento: 'kppmmmmppk',
+  durmido: 'kppppmpppk',
+  falando: 'kppmmmmppk',
+  apagado: 'kppppppppk',
+  pestanexo: 'kpppmmpppk',
+}
+
+/** Bágoas: só chora quen aínda espera que veñas. */
+const CHORA: ReadonlySet<Expresion> = new Set<Expresion>(['triste'])
+
+function filas(expresion: Expresion): readonly string[] {
+  const ocos: Record<string, string> = {
+    '1111111111': normalizar(OLLOS_ARRIBA[expresion]),
+    '2222222222': normalizar(OLLOS_ABAIXO[expresion]),
+    '3333333333': normalizar(BOCAS_ARRIBA[expresion]),
+    '4444444444': normalizar(BOCAS_ABAIXO[expresion]),
+  }
+  return CORPO.map((fila) => {
+    const oco = Object.keys(ocos).find((k) => fila.includes(k))
+    return oco === undefined ? fila : fila.replace(oco, ocos[oco] ?? '')
+  })
+}
+
+/** Garante 10 caracteres exactos: unha expresión mal medida non desprace o debuxo. */
+function normalizar(fila: string): string {
+  return fila.length === 10 ? fila : fila.slice(0, 10).padEnd(10, 'p')
+}
+
+function Grella({ filas: grella }: { readonly filas: readonly string[] }): JSX.Element {
   const cadros: JSX.Element[] = []
-  filas.forEach((fila, y) => {
+  grella.forEach((fila, y) => {
     ;[...fila].forEach((ch, x) => {
       const cor = PALETA[ch] ?? 'transparent'
       if (cor === 'transparent') {
@@ -86,13 +171,16 @@ function usePestanexo(activo: boolean): boolean {
     let seguinte: number
     let peche: number
     const programar = (): void => {
-      seguinte = window.setTimeout(() => {
-        setPechado(true)
-        peche = window.setTimeout(() => {
-          setPechado(false)
-          programar()
-        }, 160)
-      }, 3000 + Math.random() * 4000)
+      seguinte = window.setTimeout(
+        () => {
+          setPechado(true)
+          peche = window.setTimeout(() => {
+            setPechado(false)
+            programar()
+          }, 160)
+        },
+        3000 + Math.random() * 4000,
+      )
     }
     programar()
     return () => {
@@ -105,21 +193,21 @@ function usePestanexo(activo: boolean): boolean {
 }
 
 export interface BebeProps {
+  readonly expresion: Expresion
   readonly temCaca: boolean
-  readonly durmido: boolean
-  readonly triste: boolean
   /** Palabra que acaba de dicir (3/3). */
   readonly di: string | null
 }
 
-export function Bebe({ temCaca, durmido, triste, di }: BebeProps): JSX.Element {
-  const pechado = usePestanexo(!durmido)
+export function Bebe({ expresion, temCaca, di }: BebeProps): JSX.Element {
+  const durmido = expresion === 'durmido'
+  const pechado = usePestanexo(!durmido && expresion !== 'apagado')
+  const cara = pechado ? 'pestanexo' : expresion
   const bocadillo = di !== null ? di : temCaca ? '💩' : null
-  const filas = durmido ? DURMIDO : pechado ? PESTANEXO : DESPERTO
-  const texto = descricion(temCaca, durmido, triste, di)
+  const texto = DESCRICIONS[expresion]
 
   return (
-    <div className={`cova-lenzo${triste ? ' cova-lenzo--triste' : ''}`}>
+    <div className={`cova-lenzo cova-lenzo--${expresion}`}>
       <svg viewBox="0 0 32 22" role="img" aria-label={texto}>
         <title>{texto}</title>
 
@@ -143,10 +231,25 @@ export function Bebe({ temCaca, durmido, triste, di }: BebeProps): JSX.Element {
           <rect x={4} y={14} width={1} height={1} fill="#6fbf73" />
         </g>
 
-        {/* o bebé, que respira */}
+        {/* o bebé */}
         <g transform="translate(8 4)">
-          <g className={`respira${durmido ? ' respira--fonda' : ''}`}>
-            <Grella filas={filas} />
+          <g className={claseAnimacion(expresion)}>
+            <Grella filas={filas(cara)} />
+
+            {CHORA.has(expresion) ? (
+              <g shapeRendering="crispEdges">
+                <rect className="bagoa bagoa--esquerda" x={5} y={6} width={1} height={1} fill={PALETA.a} />
+                <rect className="bagoa bagoa--dereita" x={10} y={6} width={1} height={1} fill={PALETA.a} />
+              </g>
+            ) : null}
+
+            {expresion === 'contento' ? (
+              <g className="chispas" shapeRendering="crispEdges">
+                <rect x={1} y={3} width={1} height={1} fill="#e8c547" />
+                <rect x={14} y={4} width={1} height={1} fill="#e8c547" />
+              </g>
+            ) : null}
+
             {durmido ? (
               <text className="zzz" x={13} y={3} fontSize={3} fill="#b09a80">
                 z
@@ -176,19 +279,29 @@ export function Bebe({ temCaca, durmido, triste, di }: BebeProps): JSX.Element {
   )
 }
 
-function descricion(temCaca: boolean, durmido: boolean, triste: boolean, di: string | null): string {
-  if (di !== null) {
-    return `O bebé di «${di}»`
+/** Cada ánimo móvese ao seu ritmo. Un bebé apagado non fai o mesmo ca un contento. */
+function claseAnimacion(expresion: Expresion): string {
+  switch (expresion) {
+    case 'durmido':
+      return 'respira respira--fonda'
+    case 'contento':
+    case 'falando':
+      return 'respira brinca'
+    case 'apagado':
+      return 'respira respira--fonda'
+    default:
+      return 'respira'
   }
-  if (temCaca) {
-    return 'O bebé acaba de facer caca'
-  }
-  if (durmido) {
-    return 'O bebé está a durmir'
-  }
-  if (triste) {
-    return 'O bebé chora'
-  }
-  return 'O bebé está tranquilo na cova'
+}
+
+const DESCRICIONS: Record<Expresion, string> = {
+  tranquilo: 'O bebé está tranquilo na cova',
+  contento: 'O bebé está contento',
+  triste: 'O bebé chora',
+  famento: 'O bebé ten fame',
+  durmido: 'O bebé está a durmir',
+  falando: 'O bebé está a falar',
+  apagado: 'O bebé está incómodo e non chora',
+  pestanexo: 'O bebé pestanexa',
 }
 // ── FIN: o bebé ──

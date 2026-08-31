@@ -393,7 +393,8 @@ body {
     var(--fondo-fondo);
 }
 
-.mente__lenzo > * {
+.mente__lenzo > *,
+.mente__lenzo > * > * {
   width: 100%;
   height: 100%;
 }
@@ -430,15 +431,18 @@ body {
 }
 
 .lenda__mostra--descoñecido {
-  border-color: #3a2c22;
+  border-color: #4a3728;
+  background: #2a211b;
 }
 
 .lenda__mostra--descuberto {
-  border-color: var(--texto-suave);
+  border-color: #6b4f38;
+  background: #8a6a4a;
 }
 
 .lenda__mostra--maximo {
   border-color: var(--acento);
+  background: var(--acento);
 }
 
 .zoom {
@@ -826,4 +830,91 @@ body {
 
 .sombras li {
   animation: entrar 320ms ease-out both;
+}
+
+/* o botón do son */
+
+.ligazon--son {
+  padding: 2px 6px;
+  border: 2px solid var(--bordo);
+  font-size: 14px;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.ligazon--son[aria-pressed='false'] {
+  opacity: 0.5;
+}
+
+/* as caras */
+
+@keyframes brincar {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  45% {
+    transform: translateY(-0.6px);
+  }
+}
+
+@keyframes caer {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(4px);
+    opacity: 0;
+  }
+}
+
+@keyframes chispear {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.brinca {
+  animation: respirar 3.4s ease-in-out infinite, brincar 900ms ease-in-out infinite;
+}
+
+.bagoa {
+  animation: caer 1.6s ease-in infinite;
+}
+
+.bagoa--dereita {
+  animation-delay: 0.8s;
+}
+
+.chispas {
+  animation: chispear 1.4s ease-in-out infinite;
+}
+
+.cova-lenzo--apagado {
+  border-color: #8a8f9c;
+  filter: saturate(0.55);
+}
+
+.cova-lenzo--contento {
+  border-color: var(--acento);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brinca,
+  .bagoa,
+  .chispas {
+    animation: none !important;
+  }
+
+  .chispas {
+    opacity: 1;
+  }
 }

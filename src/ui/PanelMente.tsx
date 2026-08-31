@@ -3,11 +3,12 @@
 // é a mente. O mesmo documento que se exporta e se abre no editor.
 
 import { resolveLocalized } from '@yggdrasil-forge/common'
-import { SkillTree, type SkillTreeHandle } from '@yggdrasil-forge/react'
+import { SkillTree, type SkillTreeHandle, ThemeProvider } from '@yggdrasil-forge/react'
 import type { JSX } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { COR_REXION, ETIQUETA_REXION, REXIONS, type RexionId } from '../cova/mente-semente.js'
 import type { Cova } from '../cova/useCova.js'
+import { temaCova } from './tema.js'
 
 const ORDE_REXIONS: readonly RexionId[] = [
   REXIONS.corpo,
@@ -93,19 +94,24 @@ export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
       <UltimoAceso cova={cova} />
 
       <div className="mente__lenzo">
-        <SkillTree
-          ref={arbore}
-          engine={cova.engine}
-          locale="gl"
-          regions={regions}
-          regionShape="hull"
-          {...(cova.seleccionado !== null && { selectedNodeId: cova.seleccionado })}
-          onNodeClick={(id) => {
-            cova.seleccionar(id === cova.seleccionado ? null : id)
-          }}
-          showTierBadge
-          padding={28}
-        />
+        {/* O ThemeProvider ten que envolver o SkillTree: o wrapper por
+            defecto respecta un tema ascendente e só impón `minimal`
+            (pensado para fondo claro) se non hai ningún. */}
+        <ThemeProvider theme={temaCova}>
+          <SkillTree
+            ref={arbore}
+            engine={cova.engine}
+            locale="gl"
+            regions={regions}
+            regionShape="hull"
+            {...(cova.seleccionado !== null && { selectedNodeId: cova.seleccionado })}
+            onNodeClick={(id) => {
+              cova.seleccionar(id === cova.seleccionado ? null : id)
+            }}
+            showTierBadge
+            padding={28}
+          />
+        </ThemeProvider>
       </div>
 
       <footer className="mente__pe">

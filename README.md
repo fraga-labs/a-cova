@@ -96,7 +96,12 @@ que palabras aprendeu, que conceptos naceron, e que leccións lle deixou a ausen
   castigos: cada unha dá algo e quita algo. Coidalo apágaas, pero **o nodo queda na mente para
   sempre** e viaxa no documento exportado.
 - **A cara** — bebé + accións á esquerda, **a mente en vivo** (SkillTree) á dereita, acontecementos
-  con horas reais abaixo.
+  con horas reais abaixo. O bebé ten oito expresións (tranquilo · contento · triste · famento ·
+  durmido · falando · apagado · pestanexo), respira, pestanexa e chora bágoas de verdade.
+- **Sonidiños** — sintetizados con WebAudio, **cero ficheiros de audio**: o `dist` segue sendo tres
+  ficheiros. Cada acción e cada acontecemento teñen a súa voz, e o bebé **balbucea** a palabra que
+  di — sempre a mesma melodía para a mesma palabra, así soa coma a súa voz e non coma ruído. Botón
+  de silencio na cabeceira, e lémbrase.
 - **EXPORTAR BEBÉ** — descarga un documento Yggdrasil válido que abre no
   [editor público](https://fraga-labs.github.io/yggdrasil-forge/app/). *Same document, same
   decisions — agora tamén: same mind.*
@@ -117,6 +122,9 @@ consumidores.
 | `src/cova/drives.ts` | Os 5 drives, os limiares e as constantes do reloxo. |
 | `src/cova/useCova.ts` | O cableado: motor + reloxo + política + React. |
 | `src/cova/exportar.ts` | Exportar bebé como documento Yggdrasil. |
+| `src/cova/son.ts` | As voces, sintetizadas. Nin un ficheiro de audio. |
+| `src/ui/Bebe.tsx` | O pixel-art: un corpo base e catro filas que enche cada expresión. |
+| `src/ui/tema.ts` | O tema do grafo. Sen el, o `SkillTree` colle un tema de fondo claro. |
 | `src/ui/` | Os dous paneis e a franxa inferior. |
 | `docs/ACHADOS.md` | **Achados de cliente zero** contra o motor. Necesidades reais, non especulación. |
 | `TRASPASO.md` | O documento fundacional (concepto v0.1 do dono + north star visual). |

@@ -4,14 +4,19 @@ import type { JSX } from 'react'
 import { useState } from 'react'
 import { EDITOR_URL, descargarBebe } from '../cova/exportar.js'
 import { esquecerTodo } from '../cova/persistencia.js'
+import { estaSilenciado, silenciar, tocar } from '../cova/son.js'
 import { useCova } from '../cova/useCova.js'
 import { Acontecementos } from './Acontecementos.js'
 import { PanelBebe } from './PanelBebe.js'
 import { PanelMente } from './PanelMente.js'
+import { useSons } from './useSons.js'
 
 export function App(): JSX.Element {
   const cova = useCova()
   const [honestoAberto, setHonestoAberto] = useState(false)
+  const [mudo, setMudo] = useState(() => estaSilenciado())
+
+  useSons(cova)
 
   return (
     <div className="cova">
@@ -31,6 +36,25 @@ export function App(): JSX.Element {
           />
         </label>
         <div className="cabeceira__accions">
+          <button
+            type="button"
+            className="ligazon ligazon--son"
+            aria-pressed={!mudo}
+            title={mudo ? 'Activar o son' : 'Silenciar'}
+            onClick={() => {
+              const novo = !mudo
+              silenciar(novo)
+              setMudo(novo)
+              // Unha nota ao acender: confirma que o audio funciona e
+              // de paso desbloquea o AudioContext co propio clic.
+              if (!novo) {
+                tocar('oe')
+              }
+            }}
+          >
+            {mudo ? '🔇' : '🔊'}
+            <span className="visualmente-oculto">{mudo ? 'son apagado' : 'son aceso'}</span>
+          </button>
           <button
             type="button"
             className="accion accion--exportar"

@@ -4,12 +4,12 @@
 
 import type { JSX } from 'react'
 import { useState } from 'react'
-import { DRIVE_SPECS, LIMIAR_SUCIDADE } from '../cova/drives.js'
+import { DRIVE_SPECS, LIMIAR_LEDICIA, LIMIAR_SUCIDADE } from '../cova/drives.js'
 import { ESTIMULOS } from '../cova/lexico.js'
 import { DURACION_ESTIMULO, idPalabra } from '../cova/politica.js'
 import { sombrasAcesas } from '../cova/sombras.js'
 import { ACCIONS, type Cova } from '../cova/useCova.js'
-import { Bebe } from './Bebe.js'
+import { Bebe, type Expresion } from './Bebe.js'
 
 const TIERS = [
   { n: 1, etiqueta: 'OÍUNA', cor: '#5aa9e0' },
@@ -76,12 +76,7 @@ export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
         })}
       </ul>
 
-      <Bebe
-        temCaca={temCaca}
-        durmido={(cova.drives.enerxia ?? 100) < 20}
-        triste={temMalestar}
-        di={cova.di}
-      />
+      <Bebe expresion={expresion(cova, temMalestar)} temCaca={temCaca} di={cova.di} />
 
       {temCaca ? (
         <p className="alerta" role="status">
@@ -209,5 +204,32 @@ function restanteContexto(cova: Cova): number {
     return 0
   }
   return Math.min(100, Math.round((quedan / DURACION_ESTIMULO) * 100))
+}
+/**
+ * Que cara pon. A ORDE importa: o de arriba gaña. Durmir tapa todo o
+ * demais, falar tapa o malestar (é o seu momento), e «apagado» vai antes
+ * ca «triste» porque a lección da ausencia é precisamente deixar de
+ * chorar.
+ */
+function expresion(cova: Cova, temMalestar: boolean): Expresion {
+  if ((cova.drives.enerxia ?? 100) < 20) {
+    return 'durmido'
+  }
+  if (cova.di !== null) {
+    return 'falando'
+  }
+  if (temMalestar && cova.mods.cala) {
+    return 'apagado'
+  }
+  if (temMalestar) {
+    return 'triste'
+  }
+  if ((cova.drives.fame ?? 0) >= 70) {
+    return 'famento'
+  }
+  if ((cova.drives.apego ?? 0) >= LIMIAR_LEDICIA) {
+    return 'contento'
+  }
+  return 'tranquilo'
 }
 // ── FIN: o panel do bebé ──

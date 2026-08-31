@@ -87,7 +87,9 @@ export type TipoAcontecemento =
   | 'caca'
   | 'chorar'
   | 'nace-palabra'
-  | 'tier'
+  | 'oe'
+  | 'entende'
+  | 'di'
   | 'dia'
   | 'nace-concepto'
   | 'nace-memoria'
@@ -277,13 +279,18 @@ export async function ensinarPalabra(
     if (isOk(subida)) {
       tierFinal = subida.value.tier
       feitos.push(
-        acontecemento('tier', `${textoTier(tierFinal)} «${palabra}» ${tierFinal}/3`, agora, nodeId),
+        acontecemento(
+          tipoDeTier(tierFinal),
+          `${textoTier(tierFinal)} «${palabra}» ${tierFinal}/3`,
+          agora,
+          nodeId,
+        ),
       )
     }
   } else if (tierActual >= 3) {
-    feitos.push(acontecemento('tier', `repetiu «${palabra}» — xa a sabe`, agora, nodeId))
+    feitos.push(acontecemento('oe', `repetiu «${palabra}» — xa a sabe`, agora, nodeId))
   } else {
-    feitos.push(acontecemento('tier', `oíu «${palabra}» fóra de contexto`, agora, nodeId))
+    feitos.push(acontecemento('oe', `oíu «${palabra}» fóra de contexto`, agora, nodeId))
   }
 
   const frescuras: Frescuras = { ...estado.frescuras, [nodeId]: REFORZO }
@@ -291,10 +298,18 @@ export async function ensinarPalabra(
   const ditas = dita ? [...estado.ditas, palabra] : estado.ditas
 
   if (dita) {
-    feitos.push(acontecemento('tier', `DIXO «${palabra}»!`, agora, nodeId))
+    feitos.push(acontecemento('di', `DIXO «${palabra}»!`, agora, nodeId))
   }
 
   return { acontecementos: feitos, frescuras, ditas, nodeId, tier: tierFinal, dita }
+}
+
+/** O chanzo determina o tipo de acontecemento — e con el, o son. */
+function tipoDeTier(tier: number): TipoAcontecemento {
+  if (tier === 1) {
+    return 'oe'
+  }
+  return tier === 2 ? 'entende' : 'di'
 }
 
 function textoTier(tier: number): string {

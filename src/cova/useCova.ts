@@ -166,7 +166,13 @@ export function useCova(): Cova {
     if (novos.length === 0) {
       return
     }
-    setAcontecementos((vellos) => [...novos, ...vellos].slice(0, MAX_ACONTECEMENTOS))
+    // `novos` vén en orde cronolóxica (o primeiro que pasou, primeiro) e a
+    // lista amósase ao revés (o máis recente arriba). Sen o `reverse`, un
+    // lote de varios acontecementos aparecía do revés entre si: «di auga
+    // 3/3» saía por riba de «DIXO auga!» cando pasou antes.
+    setAcontecementos((vellos) =>
+      [...novos].reverse().concat(vellos).slice(0, MAX_ACONTECEMENTOS),
+    )
   }, [])
 
   // Ao nacer: acender os nodos que xa existen ao abrir os ollos.
