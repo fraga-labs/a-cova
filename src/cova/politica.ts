@@ -31,8 +31,8 @@ import {
   SOIDADE_QUE_SANDA,
 } from './drives.js'
 import { type Acontecemento, acontecemento } from './acontecementos.js'
-import { CAMPOS, camposDe } from './lexico.js'
-import { type Atencion, type Familiaridade, SEN_ATENCION } from './linguaxe.js'
+import { type EstimuloId, conceptoDe } from './lexico.js'
+import { type Atencion, type Familiaridade, type Referentes, SEN_ATENCION } from './linguaxe.js'
 import { PREFIXO, REXIONS, TAG_AUTO } from './mente-semente.js'
 import { PREFIXO_SOMBRA, SOMBRAS } from './sombras.js'
 
@@ -55,6 +55,17 @@ export interface EstadoPolitica {
    * — ver docs/ACHADOS.md, achado 7.
    */
   readonly familiaridade: Familiaridade
+  /**
+   * A situación na que se aprendeu cada palabra. É o que fai nacer os
+   * conceptos: dúas palabras da mesma situación teñen algo en común.
+   */
+  readonly referentes: Referentes
+  /**
+   * Os últimos nodos-palabra tocados, do máis recente ao máis vello.
+   * É o que goberna as fichas de repetición: «o que estou a traballar»
+   * é unha pregunta de recencia, non de puntuación.
+   */
+  readonly recentes: readonly string[]
   /** Palabras (normalizadas) que xa chegou a dicir ben algunha vez. */
   readonly ditas: readonly string[]
 }
@@ -64,6 +75,8 @@ export const ESTADO_INICIAL: EstadoPolitica = {
   dia: 1,
   atencion: SEN_ATENCION,
   familiaridade: {},
+  referentes: {},
+  recentes: [],
   ditas: [],
 }
 
@@ -145,36 +158,77 @@ function textoAceso(nodeId: string): string {
 // ── Regra 4: nacemento de conceptos ──
 
 /**
- * Busca campos semánticos con DÚAS OU MÁIS palabras a 3/3 e fai nacer o
- * nodo-concepto correspondente, que require esas palabras (`all`).
- * A mente gaña un piso.
+ * Fai nacer un concepto por cada SITUACIÓN na que o bebé xa di dúas
+ * palabras ou máis. «auga» e «baño» aprendéronse as dúas no baño: iso
+ * que teñen en común é un concepto, e a mente gaña un piso.
+ *
+ * Antes isto dependía dunha táboa pechada de campos semánticos con 28
+ * palabras. Cando o vocabulario deixou de estar limitado a esa lista, os
+ * conceptos deixaron de nacer: a regra miraba unha táboa que xa non
+ * gobernaba nada. Agora mira o que pasou de verdade.
  */
 export async function xerarConceptos(
   engine: TreeEngine,
+  referentes: Referentes,
   agora: number,
 ): Promise<readonly Acontecemento[]> {
   const feitos: Acontecemento[] = []
   const treeDef = engine.getTreeDef()
 
-  const maxadas = treeDef.nodes
-    .filter((n) => n.id.startsWith(PREFIXO.palabra))
-    .filter((n) => engine.getNodeState(n.id)?.state === 'maxed')
-    .map((n) => n.id.slice(PREFIXO.palabra.length))
-
-  for (const campo of CAMPOS) {
-    const nodeId = `${PREFIXO.concepto}${campo.id}`
-    if (treeDef.nodes.some((n) => n.id === nodeId)) {
+  // Palabras que xa di ben, agrupadas pola situación na que as aprendeu.
+  const porSituacion = new Map<EstimuloId, string[]>()
+  for (const nodo of treeDef.nodes) {
+    if (!nodo.id.startsWith(PREFIXO.palabra)) {
       continue
     }
-    const soporte = maxadas.filter((p) => camposDe(p).some((c) => c.id === campo.id))
-    if (soporte.length < 2) {
+    if (engine.getNodeState(nodo.id)?.state !== 'maxed') {
+      continue
+    }
+    const referente = referentes[nodo.id]
+    if (referente === undefined || referente === 'nada') {
+      continue
+    }
+    const lista = porSituacion.get(referente)
+    if (lista === undefined) {
+      porSituacion.set(referente, [nodo.id])
+    } else {
+      lista.push(nodo.id)
+    }
+  }
+
+  for (const [referente, palabras] of porSituacion) {
+    const concepto = conceptoDe(referente)
+    if (concepto === null || palabras.length < 2) {
+      continue
+    }
+    const nodeId = `${PREFIXO.concepto}${concepto.id}`
+    const xaExiste = treeDef.nodes.some((n) => n.id === nodeId)
+
+    // As arestas ás palabras que o sosteñen: engádense tamén despois, a
+    // medida que máis palabras da mesma situación chegan a 3/3. Así o
+    // concepto vaise enchendo en vez de quedar conxelado no que tiña o
+    // día que naceu.
+    const arestas = palabras
+      .filter((p) => !treeDef.edges.some((e) => e.id === `e-${nodeId}-${p}`))
+      .map((p) => ({
+        type: 'add_edge' as const,
+        edge: {
+          id: `e-${nodeId}-${p}`,
+          source: nodeId,
+          target: p,
+          type: 'path' as const,
+          style: { dashPattern: [6, 4] },
+        },
+      }))
+
+    if (xaExiste) {
+      if (arestas.length > 0) {
+        await engine.applyChanges(arestas)
+      }
       continue
     }
 
-    const requisitos = soporte.map(
-      (p) => ({ type: 'node_maxed', nodeId: `${PREFIXO.palabra}${p}` }) as const,
-    )
-
+    const nomes = palabras.map((p) => `«${p.slice(PREFIXO.palabra.length)}»`)
     const nacemento = await engine.applyChanges([
       {
         type: 'add_node',
@@ -182,33 +236,30 @@ export async function xerarConceptos(
           id: nodeId,
           type: 'notable',
           group: REXIONS.conceptos,
-          icon: campo.icona,
+          icon: concepto.icona,
           color: '#6fbf73',
           shape: 'diamond',
-          label: { gl: campo.etiqueta },
+          label: { gl: concepto.etiqueta },
           description: {
-            gl: `Naceu de xuntar ${soporte.map((p) => `«${p}»`).join(' e ')}.`,
+            gl: `Naceu do que teñen en común ${nomes.join(' e ')}: aprendéronse na mesma situación.`,
           },
           tags: [REXIONS.conceptos, 'concepto', TAG_AUTO],
-          prerequisites: { type: 'all', conditions: requisitos },
+          prerequisites: {
+            type: 'all',
+            conditions: palabras.map((p) => ({ type: 'node_maxed', nodeId: p }) as const),
+          },
         },
       },
-      { type: 'add_edge', edge: { id: `e-nocion-${nodeId}`, source: 'nocion', target: nodeId, type: 'dependency' } },
-      ...soporte.map((p) => ({
-        type: 'add_edge' as const,
-        edge: {
-          id: `e-${nodeId}-${p}`,
-          source: nodeId,
-          target: `${PREFIXO.palabra}${p}`,
-          type: 'path' as const,
-          style: { dashPattern: [6, 4] },
-        },
-      })),
+      {
+        type: 'add_edge',
+        edge: { id: `e-nocion-${nodeId}`, source: 'nocion', target: nodeId, type: 'dependency' },
+      },
+      ...arestas,
     ])
 
     if (isOk(nacemento)) {
       feitos.push(
-        acontecemento('nace-concepto', `naceu o concepto «${campo.etiqueta}»`, agora, nodeId),
+        acontecemento('nace-concepto', `naceu o concepto «${concepto.etiqueta}»`, agora, nodeId),
       )
     }
   }

@@ -98,8 +98,9 @@ que palabras aprendeu, que conceptos naceron, e que leccións lle deixou a ausen
   - **COMPRENDER ≠ FALAR** — a comprensión é continua (0-100 %) e a produción vai por rangos, e
     cada rango pide **as dúas cousas**: entender abondo *e* ter os sons. Por iso hai un tramo no
     que **enténdea enteira e aínda non lle sae**, e por iso «auga» sáelle `aa` → `aua` → `auga`.
-- **Conceptos** — dúas palabras a 3/3 do mesmo campo semántico fan nacer un nodo-concepto que as
-  require (`all`). A mente gaña un piso.
+- **Conceptos** — dúas palabras que xa di **e que se aprenderon na mesma situación** fan nacer un
+  nodo-concepto que as require (`all`). A mente gaña un piso. Funciona con calquera palabra: antes
+  dependía dunha táboa pechada de 28 e, en canto o vocabulario se liberou, deixaron de nacer.
 - **Esquecemento** — as palabras teñen frescura que decae; sen reforzo baixan un rango, e ao final
   pérdense.
 - **As sombras** — o que aprende cando **non** vas. Unha `soidade` acumúlase por cada necesidade

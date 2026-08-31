@@ -52,7 +52,7 @@ async function ensinar(
   let perfectas = 0
 
   for (let i = 0; i < veces; i += 1) {
-    const r = await ensinarPalabra(e, atencion, familiaridade, ditas, palabra, i)
+    const r = await ensinarPalabra(e, atencion, familiaridade, {}, ditas, palabra, i)
     if (r === null) {
       continue
     }
@@ -71,7 +71,7 @@ async function ensinar(
 describe('capa 0 — os sons entran sempre', () => {
   it('oír unha palabra fai nacer un nodo por cada son', async () => {
     const e = motor()
-    await ensinarPalabra(e, SEN_ATENCION, {}, [], 'auga', 1)
+    await ensinarPalabra(e, SEN_ATENCION, {}, {}, [], 'auga', 1)
 
     for (const son of ['a', 'u', 'g']) {
       expect(e.getTreeDef().nodes.some((n) => n.id === idSon(son))).toBe(true)
@@ -81,7 +81,7 @@ describe('capa 0 — os sons entran sempre', () => {
 
   it('a rexión SONS créase UNHA vez, non unha por son', async () => {
     const e = motor()
-    await ensinarPalabra(e, SEN_ATENCION, {}, [], 'auga', 1)
+    await ensinarPalabra(e, SEN_ATENCION, {}, {}, [], 'auga', 1)
     expect((e.getTreeDef().groups ?? []).filter((g) => g.id === 'sons')).toHaveLength(1)
   })
 

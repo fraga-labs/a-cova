@@ -56,49 +56,36 @@ export const ESTIMULOS: Readonly<Record<EstimuloId, Estimulo>> = {
 }
 
 /**
- * Campos semánticos. Dúas palabras a 3/3 do MESMO campo fan nacer o
- * concepto. É unha regra, non maxia: está escrita aquí e pódese ler.
+ * O concepto que nace de cada situación.
+ *
+ * Antes había unha táboa de campos semánticos con 28 palabras dentro, e
+ * un concepto nacía cando DÚAS delas chegaban a 3/3. En canto o
+ * vocabulario deixou de estar limitado a esa lista, os conceptos
+ * deixaron de nacer case nunca: dependían dunha táboa que xa non
+ * gobernaba nada.
+ *
+ * Agora un concepto sae do que teñen en común as palabras: **aprendéranse
+ * na mesma situación**. Iso é máis parecido a como se forman de verdade
+ * os campos semánticos, e funciona con calquera palabra que se ensine.
  */
-export interface CampoSemantico {
+export interface Concepto {
   readonly id: string
   readonly etiqueta: string
   readonly icona: string
-  /** Palabras (normalizadas) que pertencen a este campo. */
-  readonly palabras: readonly string[]
 }
 
-export const CAMPOS: readonly CampoSemantico[] = [
-  {
-    id: 'bebida',
-    etiqueta: 'bebida',
-    icona: '🥛',
-    palabras: ['auga', 'leite', 'biberon', 'beber', 'papa'],
-  },
-  {
-    id: 'familia',
-    etiqueta: 'familia',
-    icona: '👪',
-    palabras: ['mama', 'papa', 'avoa', 'avo', 'bico', 'amor'],
-  },
-  {
-    id: 'limpeza',
-    etiqueta: 'limpeza',
-    icona: '🫧',
-    palabras: ['auga', 'baño', 'limpo', 'lavar', 'sucio', 'caca'],
-  },
-  {
-    id: 'descanso',
-    etiqueta: 'descanso',
-    icona: '🌙',
-    palabras: ['durmir', 'sono', 'cama', 'noite'],
-  },
-  {
-    id: 'xogo',
-    etiqueta: 'xogo',
-    icona: '🎈',
-    palabras: ['xogar', 'pelota', 'ri', 'boliña'],
-  },
-]
+export const CONCEPTO_DE: Readonly<Record<Exclude<EstimuloId, 'nada'>, Concepto>> = {
+  fame: { id: 'comida', etiqueta: 'comida', icona: '🥣' },
+  auga: { id: 'auga', etiqueta: 'auga', icona: '🫧' },
+  sono: { id: 'descanso', etiqueta: 'descanso', icona: '🌙' },
+  xogo: { id: 'xogo', etiqueta: 'xogo', icona: '🎈' },
+  amor: { id: 'agarimo', etiqueta: 'agarimo', icona: '💗' },
+  caca: { id: 'sucidade', etiqueta: 'sucidade', icona: '💩' },
+}
+
+export function conceptoDe(referente: EstimuloId): Concepto | null {
+  return referente === 'nada' ? null : CONCEPTO_DE[referente]
+}
 
 /**
  * Normaliza unha palabra do coidador: minúsculas, sen espazos de sobra
@@ -115,9 +102,4 @@ export function casaConEstimulo(palabra: string, estimulo: EstimuloId): boolean 
   return ESTIMULOS[estimulo].palabras.includes(normalizar(palabra))
 }
 
-/** Campos semánticos aos que pertence unha palabra. */
-export function camposDe(palabra: string): readonly CampoSemantico[] {
-  const p = normalizar(palabra)
-  return CAMPOS.filter((c) => c.palabras.includes(p))
-}
 // ── FIN: o léxico da cova ──

@@ -5,7 +5,7 @@
 
 import type { TreeDef, TreeState } from '@yggdrasil-forge/core'
 import type { Acontecemento } from './acontecementos.js'
-import type { EstadoPolitica } from './politica.js'
+import { ESTADO_INICIAL, type EstadoPolitica } from './politica.js'
 
 // v2: a política cambiou de forma coa reforma da linguaxe (fóra
 // `estimulo`/`frescuras`, dentro `atencion`). A clave vai versionada
@@ -43,7 +43,17 @@ export function recuperar(): Gardado | null {
     if (dato.clave !== CLAVE || dato.tree === undefined || dato.state === undefined) {
       return null
     }
-    return dato as Gardado
+    // A política vai SEMPRE fusionada sobre a inicial. Un gardado feito
+    // cunha versión anterior non ten os campos que se engadiron despois,
+    // e sen isto o código novo rompía ao tocalos (`p.recentes.filter` de
+    // `undefined`) — e rompía en silencio, porque a cola de mutacións
+    // captura os erros. Custounos dúas voltas atopalo.
+    return {
+      ...dato,
+      politica: { ...ESTADO_INICIAL, ...(dato.politica ?? {}) },
+      acontecementos: dato.acontecementos ?? [],
+      nome: dato.nome ?? 'Meco',
+    } as Gardado
   } catch {
     return null
   }

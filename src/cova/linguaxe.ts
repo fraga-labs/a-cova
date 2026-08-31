@@ -74,6 +74,14 @@ export const DECAEMENTO_ATENCION = 12
  */
 export type Familiaridade = Record<string, number>
 
+/**
+ * A situación na que se aprendeu cada palabra, indexada por `nodeId`.
+ * É a materia prima dos conceptos: o que teñen en común dúas palabras
+ * aprendidas no mesmo sitio. E será tamén a da capa 3 do deseño, cando
+ * o significado pase a ser unha aresta e apareza a sobreextensión.
+ */
+export type Referentes = Record<string, EstimuloId>
+
 export interface Atencion {
   /** A que se está atendendo agora mesmo. `null` = a nada. */
   readonly referente: EstimuloId | null
@@ -207,6 +215,7 @@ function rangoPara(progreso: number, limiares: readonly number[]): number {
 export interface ResultadoEnsinanza {
   readonly acontecementos: readonly Acontecemento[]
   readonly familiaridade: Familiaridade
+  readonly referentes: Referentes
   readonly nodeId: string
   /** 0-100. */
   readonly comprension: number
@@ -223,6 +232,7 @@ export async function ensinarPalabra(
   engine: TreeEngine,
   atencion: Atencion,
   familiaridade: Familiaridade,
+  referentes: Referentes,
   ditas: readonly string[],
   palabraCru: string,
   agora: number,
@@ -287,6 +297,12 @@ export async function ensinarPalabra(
 
   const antes = seguinte[nodeId] ?? 0
   let comprension = antes
+  // A situación na que se aprendeu. Só se anota cando hai atención: unha
+  // palabra oída no baleiro non pertence a ningunha situación.
+  const seguintesReferentes: Referentes = { ...referentes }
+  if (enContexto && atencion.referente !== null) {
+    seguintesReferentes[nodeId] = atencion.referente
+  }
 
   if (enContexto) {
     // Rendementos decrecentes: as primeiras veces ensinan moito máis cás
@@ -301,7 +317,12 @@ export async function ensinarPalabra(
     // enchíase de «vai entendendo (100%)» unha e outra vez.
     if (comprension > antes) {
       feitos.push(
-        acontecemento('entende', `vai entendendo «${palabra}» (${comprension}%)`, agora, nodeId),
+        acontecemento(
+          'entende',
+          `vai entendendo «${palabra}» (${Math.round(comprension)}%)`,
+          agora,
+          nodeId,
+        ),
       )
     }
   } else {
@@ -341,6 +362,7 @@ export async function ensinarPalabra(
   return {
     acontecementos: feitos,
     familiaridade: seguinte,
+    referentes: seguintesReferentes,
     nodeId,
     comprension,
     producion,
@@ -451,4 +473,62 @@ export function comprensionDe(familiaridade: Familiaridade, palabra: string): nu
   return familiaridade[idPalabra(palabra)] ?? 0
 }
 
+/** Unha palabra tal e como está agora. Para a lista do panel. */
+export interface PalabraEnCurso {
+  readonly palabra: string
+  readonly nodeId: string
+  readonly comprension: number
+  readonly producion: number
+  readonly forma: string
+}
+
+/**
+ * As palabras nas que paga a pena traballar agora, primeiro as que están
+ * máis preto de dar o seguinte paso.
+ *
+ * Existe porque a repetición é o corazón do xogo e ata agora custaba
+ * reescribir a palabra enteira cada vez. Repetir ten que ser un clic.
+ */
+export function palabrasEnCurso(
+  engine: TreeEngine,
+  familiaridade: Familiaridade,
+  recentes: readonly string[] = [],
+  limite = 8,
+): readonly PalabraEnCurso[] {
+  const dominados = sonsDominados(engine)
+  const todas: PalabraEnCurso[] = []
+
+  for (const nodo of engine.getTreeDef().nodes) {
+    if (!nodo.id.startsWith(PREFIXO.palabra)) {
+      continue
+    }
+    const palabra = nodo.id.slice(PREFIXO.palabra.length)
+    todas.push({
+      palabra,
+      nodeId: nodo.id,
+      comprension: Math.round(familiaridade[nodo.id] ?? 0),
+      producion: engine.getNodeState(nodo.id)?.currentTier ?? 0,
+      forma: comoDi(palabra, dominados),
+    })
+  }
+
+  // A RECENCIA manda. Ordenar só por «canto lle falta» funcionaba con
+  // dez palabras e rompía con douscentas: a que acababas de ensinar
+  // afundíase entre as vellas e non podías repetila. O que estás a
+  // traballar é o que acabas de tocar, non o que ten mellor nota.
+  const orde = new Map(recentes.map((id, i) => [id, i]))
+  return todas
+    .sort((a, b) => {
+      const ra = orde.get(a.nodeId) ?? Number.POSITIVE_INFINITY
+      const rb = orde.get(b.nodeId) ?? Number.POSITIVE_INFINITY
+      if (ra !== rb) {
+        return ra - rb
+      }
+      if (a.producion >= 3 !== b.producion >= 3) {
+        return a.producion >= 3 ? 1 : -1
+      }
+      return b.comprension - a.comprension
+    })
+    .slice(0, limite)
+}
 // ── FIN: a linguaxe ──

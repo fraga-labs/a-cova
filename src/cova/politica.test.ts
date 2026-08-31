@@ -5,8 +5,7 @@
 import { TreeEngine } from '@yggdrasil-forge/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DIXESTION_MS, LIMIAR_SUCIDADE } from './drives.js'
-import { camposDe } from './lexico.js'
-import { type Familiaridade, ensinarPalabra } from './linguaxe.js'
+import { type Familiaridade, type Referentes, ensinarPalabra } from './linguaxe.js'
 import { menteSemente } from './mente-semente.js'
 import {
   limparCaca,
@@ -158,46 +157,84 @@ describe('a dixestion - o que entra, sae', () => {
   })
 })
 
-describe('regra 4 — os conceptos', () => {
-  /** Cría a palabra ata que o bebé a di ben (rango 3). */
+describe('regra 4 — os conceptos nacen da situación', () => {
+  /** Cría a palabra ata que o bebé a di ben, na situación indicada. */
   async function aprender(e: TreeEngine, palabra: string, referente: 'auga' | 'fame') {
     let familiaridade: Familiaridade = {}
+    let referentes: Referentes = {}
     for (let i = 0; i < 20; i += 1) {
       const r = await ensinarPalabra(
         e,
         { referente, forza: 100 },
         familiaridade,
+        referentes,
         [],
         palabra,
         i,
       )
       familiaridade = r?.familiaridade ?? familiaridade
+      referentes = r?.referentes ?? referentes
     }
+    return referentes
   }
 
-  it('dúas palabras a 3/3 do mesmo campo fan nacer o concepto', async () => {
+  it('dúas palabras aprendidas na MESMA situación fan nacer o concepto', async () => {
     const e = motor()
-    await aprender(e, 'auga', 'auga')
-    await aprender(e, 'leite', 'fame')
+    const r1 = await aprender(e, 'auga', 'auga')
+    const r2 = await aprender(e, 'baño', 'auga')
+    const referentes = { ...r1, ...r2 }
 
-    expect(camposDe('auga').map((c) => c.id)).toContain('bebida')
-    expect(camposDe('leite').map((c) => c.id)).toContain('bebida')
-
-    const feitos = await xerarConceptos(e, 1)
-    const concepto = e.getTreeDef().nodes.find((n) => n.id === 'concepto:bebida')
-    expect(concepto).toBeDefined()
-    expect(feitos.some((f) => f.nodeId === 'concepto:bebida')).toBe(true)
+    const feitos = await xerarConceptos(e, referentes, 1)
+    expect(e.getTreeDef().nodes.some((n) => n.id === 'concepto:auga')).toBe(true)
+    expect(feitos.some((f) => f.nodeId === 'concepto:auga')).toBe(true)
 
     // Nace apagado e acéndeo a regra 1, porque REQUIRE as súas palabras.
     await reconciliarAutonomos(e, 2)
-    expect(estadoDe(e, 'concepto:bebida')).toBe('unlocked')
+    expect(estadoDe(e, 'concepto:auga')).toBe('unlocked')
+  })
+
+  it('funciona con palabras INVENTADAS: xa non depende de ningunha táboa', async () => {
+    // Este é o punto. Antes só nacían conceptos coas 28 palabras do
+    // léxico; con calquera outra, a rexión CONCEPTOS quedaba baleira
+    // para sempre.
+    const e = motor()
+    const r1 = await aprender(e, 'cadeira', 'fame')
+    const r2 = await aprender(e, 'culler', 'fame')
+
+    await xerarConceptos(e, { ...r1, ...r2 }, 1)
+    expect(e.getTreeDef().nodes.some((n) => n.id === 'concepto:comida')).toBe(true)
+  })
+
+  it('dúas palabras de situacións DISTINTAS non fan concepto ningún', async () => {
+    const e = motor()
+    const r1 = await aprender(e, 'auga', 'auga')
+    const r2 = await aprender(e, 'papa', 'fame')
+
+    await xerarConceptos(e, { ...r1, ...r2 }, 1)
+    expect(e.getTreeDef().nodes.filter((n) => n.id.startsWith('concepto:'))).toHaveLength(0)
   })
 
   it('unha soa palabra non abonda', async () => {
     const e = motor()
-    await aprender(e, 'auga', 'auga')
-    await xerarConceptos(e, 1)
-    expect(e.getTreeDef().nodes.some((n) => n.id === 'concepto:bebida')).toBe(false)
+    const referentes = await aprender(e, 'auga', 'auga')
+    await xerarConceptos(e, referentes, 1)
+    expect(e.getTreeDef().nodes.some((n) => n.id === 'concepto:auga')).toBe(false)
+  })
+
+  it('unha palabra nova da mesma situación engánchase ao concepto que xa hai', async () => {
+    const e = motor()
+    const r1 = await aprender(e, 'auga', 'auga')
+    const r2 = await aprender(e, 'baño', 'auga')
+    await xerarConceptos(e, { ...r1, ...r2 }, 1)
+    const antes = e.getTreeDef().edges.filter((x) => x.source === 'concepto:auga').length
+
+    const r3 = await aprender(e, 'limpo', 'auga')
+    await xerarConceptos(e, { ...r1, ...r2, ...r3 }, 2)
+
+    // Non se crea outro concepto; énchese o que xa había.
+    expect(e.getTreeDef().nodes.filter((n) => n.id === 'concepto:auga')).toHaveLength(1)
+    expect(e.getTreeDef().edges.filter((x) => x.source === 'concepto:auga').length).toBe(antes + 1)
   })
 })
+
 // ── FIN: probas da política ──

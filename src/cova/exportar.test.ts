@@ -11,7 +11,7 @@ import { TreeEngine, isOk, validateTreeDef } from '@yggdrasil-forge/core'
 import { describe, expect, it } from 'vitest'
 import { documentoBebe, nomeFicheiro } from './exportar.js'
 import { menteSemente } from './mente-semente.js'
-import { type Familiaridade, ensinarPalabra } from './linguaxe.js'
+import { type Familiaridade, type Referentes, ensinarPalabra } from './linguaxe.js'
 import { ESTADO_INICIAL, type EstadoPolitica, xerarConceptos } from './politica.js'
 
 const DESTINO = resolve(process.cwd(), '.tmp/bebe-medrado.json')
@@ -22,9 +22,11 @@ async function criar(): Promise<{ engine: TreeEngine; politica: EstadoPolitica }
   let politica: EstadoPolitica = { ...ESTADO_INICIAL, dia: 3 }
 
   let familiaridade: Familiaridade = {}
+  let referentes: Referentes = {}
+  // As dúas na MESMA situación: así nace o concepto (ver a regra 4).
   for (const [palabra, referente] of [
     ['auga', 'auga'],
-    ['leite', 'fame'],
+    ['baño', 'auga'],
   ] as const) {
     // Agora fan falta bastantes máis exposicións: hai que darlle os sons
     // ademais do significado.
@@ -33,15 +35,17 @@ async function criar(): Promise<{ engine: TreeEngine; politica: EstadoPolitica }
         engine,
         { referente, forza: 100 },
         familiaridade,
+        referentes,
         politica.ditas,
         palabra,
         i,
       )
       familiaridade = r?.familiaridade ?? familiaridade
-      politica = { ...politica, familiaridade, ditas: r?.ditas ?? politica.ditas }
+      referentes = r?.referentes ?? referentes
+      politica = { ...politica, familiaridade, referentes, ditas: r?.ditas ?? politica.ditas }
     }
   }
-  await xerarConceptos(engine, 1)
+  await xerarConceptos(engine, referentes, 1)
   return { engine, politica }
 }
 
@@ -59,7 +63,7 @@ describe('exportar bebé', () => {
 
     // Nodos nacidos en runtime, non declarados na semente.
     expect(doc.nodes.some((n) => n.id === 'palabra:auga')).toBe(true)
-    expect(doc.nodes.some((n) => n.id === 'concepto:bebida')).toBe(true)
+    expect(doc.nodes.some((n) => n.id === 'concepto:auga')).toBe(true)
 
     const resultado = validateTreeDef(doc)
     if (!isOk(resultado)) {

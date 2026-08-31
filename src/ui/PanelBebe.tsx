@@ -7,7 +7,13 @@ import { useState } from 'react'
 import { DRIVE_SPECS, LIMIAR_LEDICIA, LIMIAR_SUCIDADE } from '../cova/drives.js'
 import { ESTIMULOS } from '../cova/lexico.js'
 import { comoDi } from '../cova/fonoloxia.js'
-import { LIMIARES_PALABRA, comprensionDe, idPalabra, sonsDominados } from '../cova/linguaxe.js'
+import {
+  LIMIARES_PALABRA,
+  comprensionDe,
+  idPalabra,
+  palabrasEnCurso,
+  sonsDominados,
+} from '../cova/linguaxe.js'
 import { sombrasAcesas } from '../cova/sombras.js'
 import { ACCIONS, type Cova } from '../cova/useCova.js'
 import { Bebe, type Expresion } from './Bebe.js'
@@ -34,6 +40,11 @@ export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
   const estimulo = ESTIMULOS[cova.politica.atencion.referente ?? 'nada']
   const sombras = sombrasAcesas(cova.engine)
 
+  const enCurso = palabrasEnCurso(
+    cova.engine,
+    cova.politica.familiaridade,
+    cova.politica.recentes,
+  )
   const nodoAmostra = palabraAmostra === null ? null : idPalabra(palabraAmostra)
   const comprension = Math.round(
     palabraAmostra === null ? 0 : comprensionDe(cova.politica.familiaridade, palabraAmostra),
@@ -176,6 +187,33 @@ export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
           <span aria-hidden="true">💬</span> ENSINAR PALABRA
         </button>
       </div>
+
+      {/* Repetir cun clic. A repetición é o corazón do xogo e ata agora
+          custaba reescribir a palabra enteira cada vez. */}
+      {enCurso.length > 0 ? (
+        <div className="fichas" role="group" aria-label="Repetir unha palabra">
+          {enCurso.map((p) => (
+            <button
+              key={p.nodeId}
+              type="button"
+              className={`ficha ficha--${p.producion}`}
+              disabled={cova.ocupado}
+              title={`entende ${p.comprension}% · ${
+                p.producion >= 3 ? 'dío ben' : p.forma === '' ? 'aínda non lle sae' : `sáelle «${p.forma}»`
+              }`}
+              onClick={() => {
+                cova.ensinar(p.palabra)
+                setUltima(p.palabra)
+              }}
+            >
+              {p.palabra}
+              <span className="ficha__barra" aria-hidden="true">
+                <span className="ficha__cheo" style={{ width: `${p.comprension}%` }} />
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div className="aprendizaxe">
         <div className="aprendizaxe__fila">

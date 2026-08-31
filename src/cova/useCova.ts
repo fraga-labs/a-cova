@@ -33,6 +33,9 @@ import { type Modificadores, modificadores, sombrasAcesas, xerarSombras } from '
 
 const MAX_ACONTECEMENTOS = 60
 
+/** Cantas palabras se lembran como «en curso» para as fichas. */
+const MAX_RECENTES = 12
+
 export type AccionId = 'alimentar' | 'limpar' | 'xogar' | 'aloumiñar' | 'durmir'
 
 export interface Accion {
@@ -197,7 +200,13 @@ export function useCova(): Cova {
     setOcupado(true)
     carril.current = carril.current
       .then(traballo)
-      .catch(() => undefined)
+      .catch((erro: unknown) => {
+        // O carril NON pode morrer: se unha acción peta, as seguintes
+        // teñen que seguir funcionando. Pero tampouco pode calar — un
+        // erro tragado aquí fai que os botóns deixen de facer efecto sen
+        // ningunha pista de por que.
+        console.error('[a-cova] fallou unha acción:', erro)
+      })
       .finally(() => {
         setOcupado(false)
       })
@@ -207,7 +216,7 @@ export function useCova(): Cova {
   const reacomodar = useCallback(async (): Promise<readonly Acontecemento[]> => {
     const t = agora()
     const autos = await reconciliarAutonomos(engine, t)
-    const conceptos = await xerarConceptos(engine, t)
+    const conceptos = await xerarConceptos(engine, politicaRef.current.referentes, t)
     // Ao final: o que naceu aínda non ten sitio no debuxo.
     await recolocar(engine)
     return [...autos, ...conceptos]
@@ -322,6 +331,7 @@ export function useCova(): Cova {
           engine,
           previa.atencion,
           previa.familiaridade,
+          previa.referentes,
           previa.ditas,
           palabra,
           t,
@@ -352,8 +362,21 @@ export function useCova(): Cova {
           )
         }
 
+        // Anótase ANTES de reacomodar: os conceptos nacen dos referentes,
+        // e `reacomodar` lelos do ref. Ao revés, o concepto tardaría un
+        // momento de máis en aparecer.
+        mudarPolitica((p) => ({
+          ...p,
+          familiaridade: r.familiaridade,
+          referentes: r.referentes,
+          recentes: [r.nodeId, ...(p.recentes ?? []).filter((x) => x !== r.nodeId)].slice(
+            0,
+            MAX_RECENTES,
+          ),
+          ditas: r.ditas,
+        }))
+
         feitos.push(...(await reacomodar()))
-        mudarPolitica((p) => ({ ...p, familiaridade: r.familiaridade, ditas: r.ditas }))
         setSeleccionado(r.nodeId)
         rexistrar(feitos)
       })
