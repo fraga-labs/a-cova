@@ -4,7 +4,7 @@
 // Así `politica.ts` segue sendo probable sen navegador nin WebAudio.
 
 import { useEffect, useRef } from 'react'
-import type { Acontecemento, TipoAcontecemento } from '../cova/politica.js'
+import type { Acontecemento, TipoAcontecemento } from '../cova/acontecementos.js'
 import { type Voz, balbucir, tocar } from '../cova/son.js'
 import type { Cova } from '../cova/useCova.js'
 
@@ -13,7 +13,8 @@ const VOCES: Record<TipoAcontecemento, Voz | null> = {
   accion: null, // xa soa a acción concreta, máis abaixo
   caca: 'caca',
   chorar: 'chorar',
-  'nace-palabra': null, // vén sempre seguido dun «oíu 1/3»; abonda con ese
+  'nace-palabra': null, // vén sempre seguido dun «oe» ou «entende»
+  son: 'concepto', // gañar un son é un fito pequeno pero real
   oe: 'oe',
   entende: 'entende',
   di: 'di',

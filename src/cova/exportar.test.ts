@@ -11,7 +11,8 @@ import { TreeEngine, isOk, validateTreeDef } from '@yggdrasil-forge/core'
 import { describe, expect, it } from 'vitest'
 import { documentoBebe, nomeFicheiro } from './exportar.js'
 import { menteSemente } from './mente-semente.js'
-import { ESTADO_INICIAL, type EstadoPolitica, ensinarPalabra, xerarConceptos } from './politica.js'
+import { type Familiaridade, ensinarPalabra } from './linguaxe.js'
+import { ESTADO_INICIAL, type EstadoPolitica, xerarConceptos } from './politica.js'
 
 const DESTINO = resolve(process.cwd(), '.tmp/bebe-medrado.json')
 
@@ -20,14 +21,24 @@ async function criar(): Promise<{ engine: TreeEngine; politica: EstadoPolitica }
   const engine = new TreeEngine(menteSemente(), { audit: { enabled: true } })
   let politica: EstadoPolitica = { ...ESTADO_INICIAL, dia: 3 }
 
-  for (const [palabra, estimulo] of [
+  let familiaridade: Familiaridade = {}
+  for (const [palabra, referente] of [
     ['auga', 'auga'],
     ['leite', 'fame'],
   ] as const) {
-    politica = { ...politica, estimulo }
-    for (let i = 0; i < 3; i += 1) {
-      const r = await ensinarPalabra(engine, politica, palabra, i)
-      politica = { ...politica, frescuras: r?.frescuras ?? {}, ditas: r?.ditas ?? politica.ditas }
+    // Agora fan falta bastantes máis exposicións: hai que darlle os sons
+    // ademais do significado.
+    for (let i = 0; i < 20; i += 1) {
+      const r = await ensinarPalabra(
+        engine,
+        { referente, forza: 100 },
+        familiaridade,
+        politica.ditas,
+        palabra,
+        i,
+      )
+      familiaridade = r?.familiaridade ?? familiaridade
+      politica = { ...politica, familiaridade, ditas: r?.ditas ?? politica.ditas }
     }
   }
   await xerarConceptos(engine, 1)

@@ -15,14 +15,11 @@ import {
 import type { EstimuloId } from './lexico.js'
 import { menteSemente } from './mente-semente.js'
 import { gardar, recuperar } from './persistencia.js'
+import { type Acontecemento, acontecemento } from './acontecementos.js'
+import { DECAEMENTO_ATENCION, ensinarPalabra, esquecer } from './linguaxe.js'
 import {
-  type Acontecemento,
-  DURACION_ESTIMULO,
   ESTADO_INICIAL,
   type EstadoPolitica,
-  acontecemento,
-  ensinarPalabra,
-  esquecer,
   limparCaca,
   medirSoidade,
   nacerMemoria,
@@ -30,6 +27,7 @@ import {
   reconciliarAutonomos,
   xerarConceptos,
 } from './politica.js'
+import { SEN_ATENCION } from './linguaxe.js'
 import { type Modificadores, modificadores, sombrasAcesas, xerarSombras } from './sombras.js'
 
 const MAX_ACONTECEMENTOS = 60
@@ -250,11 +248,14 @@ export function useCova(): Cova {
         if (dia !== previa.dia) {
           feitos.push(acontecemento('dia', `amenceu o día ${dia}`, t))
         }
-        const estimulo = momentos >= previa.estimuloAte ? 'nada' : previa.estimulo
-        mudarPolitica((p) => ({ ...p, momentos, dia, estimulo }))
+        // A atención non caduca de golpe: apágase. Cada momento vale
+        // menos ca o anterior para ensinar.
+        const forza = Math.max(0, previa.atencion.forza - DECAEMENTO_ATENCION)
+        const atencion = forza === 0 ? SEN_ATENCION : { ...previa.atencion, forza }
+        mudarPolitica((p) => ({ ...p, momentos, dia, atencion }))
 
-        const olvido = await esquecer(engine, politicaRef.current.frescuras, t)
-        mudarPolitica((p) => ({ ...p, frescuras: olvido.frescuras }))
+        const olvido = await esquecer(engine, politicaRef.current.familiaridade, t)
+        mudarPolitica((p) => ({ ...p, familiaridade: olvido.familiaridade }))
         feitos.push(...olvido.acontecementos)
 
         rexistrar(feitos)
@@ -298,10 +299,10 @@ export function useCova(): Cova {
 
         feitos.push(...(await reacomodar()))
 
+        // Atender a algo é o que fai que ensinar sirva de algo.
         mudarPolitica((p) => ({
           ...p,
-          estimulo: accion.estimulo,
-          estimuloAte: p.momentos + DURACION_ESTIMULO,
+          atencion: { referente: accion.estimulo, forza: 100 },
         }))
         rexistrar(feitos)
       })
@@ -313,32 +314,43 @@ export function useCova(): Cova {
     (palabra: string) => {
       enfileirar(async () => {
         const t = agora()
-        const r = await ensinarPalabra(engine, politicaRef.current, palabra, t)
+        const previa = politicaRef.current
+        const r = await ensinarPalabra(
+          engine,
+          previa.atencion,
+          previa.familiaridade,
+          previa.ditas,
+          palabra,
+          t,
+        )
         if (r === null) {
           return
         }
         const feitos: Acontecemento[] = [...r.acontecementos]
 
-        if (r.dita) {
-          setDi(palabra)
+        // O bocadillo amosa o que REALMENTE lle sae, non a palabra que
+        // escribiches: «aua» antes ca «auga».
+        if (r.producion >= 1 && r.forma !== '') {
+          setDi(r.forma)
           window.setTimeout(() => {
             setDi(null)
           }, 4000)
-          if (politicaRef.current.ditas.length === 0) {
-            feitos.push(
-              ...(await nacerMemoria(
-                engine,
-                'primeira-palabra',
-                'primeira palabra ★',
-                `A primeira palabra que dixo foi «${palabra}».`,
-                t,
-              )),
-            )
-          }
+        }
+
+        if (r.perfecta && previa.ditas.length === 0) {
+          feitos.push(
+            ...(await nacerMemoria(
+              engine,
+              'primeira-palabra',
+              'primeira palabra ★',
+              `A primeira palabra que dixo ben foi «${palabra}».`,
+              t,
+            )),
+          )
         }
 
         feitos.push(...(await reacomodar()))
-        mudarPolitica((p) => ({ ...p, frescuras: r.frescuras, ditas: r.ditas }))
+        mudarPolitica((p) => ({ ...p, familiaridade: r.familiaridade, ditas: r.ditas }))
         setSeleccionado(r.nodeId)
         rexistrar(feitos)
       })

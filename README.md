@@ -82,10 +82,15 @@ que palabras aprendeu, que conceptos naceron, e que leccións lle deixou a ausen
   `resources` do documento, cun reloxo que os fai derivar. Alimentar programa a dixestión
   (`time_after`) → **CACA** → a sucidade dispárase → o nodo **malestar acéndese só** e cobra apego.
   Limpar apaga as dúas cousas e volve armar a dixestión.
-- **Bucle da linguaxe** — ensinar unha palabra fai **nacer un nodo** (`applyChanges`) colgado da
-  voz, con 3 rangos: **1/3 oíuna · 2/3 compréndea · 3/3 dia**. Os rangos 2 e 3 só suben con
-  **repetición en contexto** (a palabra ten que casar co estímulo activo). A primeira palabra a 3/3
-  fai nacer unha memoria.
+- **Bucle da linguaxe** (v2, ver [docs/design/LINGUAXE.md](docs/design/LINGUAXE.md)) — tres capas
+  separadas, porque aprender a falar non é un só contador:
+  - **SONS** — cada fonema que oe é un nodo con tres rangos. Ensinar *fóra* de contexto xa non é
+    tempo perdido: dálle sons. As vogais son case de balde; o `/rr/` é o que máis custa.
+  - **ATENCIÓN CONXUNTA** — non hai temporizador: hai unha cousa á que se atende, e a atención
+    **decae**. Ensinar xusto despois da acción vale moito máis ca ensinar tarde.
+  - **COMPRENDER ≠ FALAR** — a comprensión é continua (0-100 %) e a produción vai por rangos, e
+    cada rango pide **as dúas cousas**: entender abondo *e* ter os sons. Por iso hai un tramo no
+    que **enténdea enteira e aínda non lle sae**, e por iso «auga» sáelle `aa` → `aua` → `auga`.
 - **Conceptos** — dúas palabras a 3/3 do mesmo campo semántico fan nacer un nodo-concepto que as
   require (`all`). A mente gaña un piso.
 - **Esquecemento** — as palabras teñen frescura que decae; sen reforzo baixan un rango, e ao final
@@ -117,6 +122,8 @@ consumidores.
 | --- | --- |
 | `src/cova/mente-semente.ts` | A mente coa que nace: 13 nodos en 5 rexións. Documento válido desde o día un. |
 | `src/cova/politica.ts` | **O corazón novo.** As 5 regras de crecemento. Puro respecto de React; testado. |
+| `src/cova/linguaxe.ts` | Sons, atención, comprensión e produción. O bucle da fala. |
+| `src/cova/fonoloxia.ts` | Como lle sae unha palabra cos sons que domina. Puro e testado. |
 | `src/cova/lexico.ts` | A táboa de estímulos e campos semánticos. Está á vista a propósito. |
 | `src/cova/sombras.ts` | As leccións da ausencia e o que lle cambian ao mundo. |
 | `src/cova/drives.ts` | Os 5 drives, os limiares e as constantes do reloxo. |

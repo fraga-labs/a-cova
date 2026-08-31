@@ -4,7 +4,7 @@
 
 import type { JSX } from 'react'
 import { PREFIXO } from '../cova/mente-semente.js'
-import type { Acontecemento } from '../cova/politica.js'
+import type { Acontecemento } from '../cova/acontecementos.js'
 import type { Cova } from '../cova/useCova.js'
 
 function hora(ms: number): string {
@@ -16,6 +16,7 @@ const ICONA: Readonly<Record<Acontecemento['tipo'], string>> = {
   caca: '💩',
   chorar: '😢',
   'nace-palabra': '✦',
+  son: '🔉',
   oe: '👂',
   entende: '💡',
   di: '💬',

@@ -5,14 +5,10 @@
 import { TreeEngine } from '@yggdrasil-forge/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DIXESTION_MS, LIMIAR_SUCIDADE } from './drives.js'
-import { camposDe, casaConEstimulo, normalizar } from './lexico.js'
+import { camposDe } from './lexico.js'
+import { type Familiaridade, ensinarPalabra } from './linguaxe.js'
 import { menteSemente } from './mente-semente.js'
 import {
-  ESTADO_INICIAL,
-  type EstadoPolitica,
-  ensinarPalabra,
-  esquecer,
-  idPalabra,
   limparCaca,
   programarDixestion,
   reconciliarAutonomos,
@@ -30,10 +26,6 @@ function motor(): TreeEngine {
  */
 function estadoDe(e: TreeEngine, id: string): string {
   return e.getNodeState(id)?.state ?? 'locked'
-}
-
-function estado(parcial: Partial<EstadoPolitica> = {}): EstadoPolitica {
-  return { ...ESTADO_INICIAL, ...parcial }
 }
 
 describe('a mente semente', () => {
@@ -166,60 +158,20 @@ describe('a dixestion - o que entra, sae', () => {
   })
 })
 
-describe('regra 2 e 3 — a linguaxe por tiers', () => {
-  it('unha palabra nova NACE como nodo colgado da voz', async () => {
-    const e = motor()
-    const r = await ensinarPalabra(e, estado(), 'auga', 1)
-    expect(r).not.toBeNull()
-
-    const nodo = e.getTreeDef().nodes.find((n) => n.id === idPalabra('auga'))
-    expect(nodo).toBeDefined()
-    expect(nodo?.group).toBe('linguaxe')
-    expect(nodo?.maxTier).toBe(3)
-    expect(e.getTreeDef().edges.some((x) => x.source === 'verbo' && x.target === nodo?.id)).toBe(
-      true,
-    )
-    expect(e.getNodeState(nodo?.id ?? '')?.currentTier).toBe(1)
-  })
-
-  it('fóra de contexto quédase en 1/3 por moito que se repita', async () => {
-    const e = motor()
-    let st = estado({ estimulo: 'nada' })
-    for (let i = 0; i < 5; i += 1) {
-      const r = await ensinarPalabra(e, st, 'auga', i)
-      st = { ...st, frescuras: r?.frescuras ?? {} }
-    }
-    expect(e.getNodeState(idPalabra('auga'))?.currentTier).toBe(1)
-  })
-
-  it('en contexto chega a 3/3 e o nodo queda `maxed`', async () => {
-    const e = motor()
-    let st = estado({ estimulo: 'auga' })
-    let dita = false
-    for (let i = 0; i < 3; i += 1) {
-      const r = await ensinarPalabra(e, st, 'auga', i)
-      st = { ...st, frescuras: r?.frescuras ?? {}, ditas: r?.ditas ?? [] }
-      dita = dita || (r?.dita ?? false)
-    }
-    expect(e.getNodeState(idPalabra('auga'))?.currentTier).toBe(3)
-    expect(e.getNodeState(idPalabra('auga'))?.state).toBe('maxed')
-    expect(dita).toBe(true)
-    expect(st.ditas).toEqual(['auga'])
-  })
-
-  it('normaliza acentos: «mamá» e «mama» son a mesma palabra', () => {
-    expect(normalizar('  MAMÁ ')).toBe('mama')
-    expect(casaConEstimulo('Mamá', 'amor')).toBe(true)
-    expect(casaConEstimulo('mamá', 'sono')).toBe(false)
-  })
-})
-
 describe('regra 4 — os conceptos', () => {
-  async function aprender(e: TreeEngine, palabra: string, estimulo: EstadoPolitica['estimulo']) {
-    let st = estado({ estimulo })
-    for (let i = 0; i < 3; i += 1) {
-      const r = await ensinarPalabra(e, st, palabra, i)
-      st = { ...st, frescuras: r?.frescuras ?? {} }
+  /** Cría a palabra ata que o bebé a di ben (rango 3). */
+  async function aprender(e: TreeEngine, palabra: string, referente: 'auga' | 'fame') {
+    let familiaridade: Familiaridade = {}
+    for (let i = 0; i < 20; i += 1) {
+      const r = await ensinarPalabra(
+        e,
+        { referente, forza: 100 },
+        familiaridade,
+        [],
+        palabra,
+        i,
+      )
+      familiaridade = r?.familiaridade ?? familiaridade
     }
   }
 
@@ -246,37 +198,6 @@ describe('regra 4 — os conceptos', () => {
     await aprender(e, 'auga', 'auga')
     await xerarConceptos(e, 1)
     expect(e.getTreeDef().nodes.some((n) => n.id === 'concepto:bebida')).toBe(false)
-  })
-})
-
-describe('regra 5 — o esquecemento', () => {
-  it('unha palabra sen reforzo vai perdendo tiers ata desaparecer', async () => {
-    const e = motor()
-    const r = await ensinarPalabra(e, estado(), 'auga', 1)
-    const id = idPalabra('auga')
-    expect(e.getNodeState(id)?.currentTier).toBe(1)
-
-    let frescuras = { ...(r?.frescuras ?? {}), [id]: 1 }
-    const paso = await esquecer(e, frescuras, 2)
-    frescuras = paso.frescuras
-
-    expect(e.getNodeState(id)?.currentTier).toBe(0)
-    expect(paso.acontecementos.some((a) => a.texto.includes('esqueceu'))).toBe(true)
-    expect(frescuras[id]).toBeUndefined()
-  })
-
-  it('unha palabra a 3/3 baixa un chanzo, non se perde de golpe', async () => {
-    const e = motor()
-    let st = estado({ estimulo: 'auga' })
-    for (let i = 0; i < 3; i += 1) {
-      const r = await ensinarPalabra(e, st, 'auga', i)
-      st = { ...st, frescuras: r?.frescuras ?? {} }
-    }
-    const id = idPalabra('auga')
-
-    const paso = await esquecer(e, { [id]: 1 }, 4)
-    expect(e.getNodeState(id)?.currentTier).toBe(2)
-    expect(paso.frescuras[id]).toBeGreaterThan(0)
   })
 })
 // ── FIN: probas da política ──

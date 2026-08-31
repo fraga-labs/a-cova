@@ -6,15 +6,17 @@ import type { JSX } from 'react'
 import { useState } from 'react'
 import { DRIVE_SPECS, LIMIAR_LEDICIA, LIMIAR_SUCIDADE } from '../cova/drives.js'
 import { ESTIMULOS } from '../cova/lexico.js'
-import { DURACION_ESTIMULO, idPalabra } from '../cova/politica.js'
+import { comoDi } from '../cova/fonoloxia.js'
+import { LIMIARES_PALABRA, comprensionDe, idPalabra, sonsDominados } from '../cova/linguaxe.js'
 import { sombrasAcesas } from '../cova/sombras.js'
 import { ACCIONS, type Cova } from '../cova/useCova.js'
 import { Bebe, type Expresion } from './Bebe.js'
 
+/** Os tres chanzos de PRODUCIÓN. A comprensión vai aparte, e vai por diante. */
 const TIERS = [
-  { n: 1, etiqueta: 'OÍUNA', cor: '#5aa9e0' },
-  { n: 2, etiqueta: 'COMPRÉNDEA', cor: '#e8c547' },
-  { n: 3, etiqueta: 'DIA!', cor: '#6fbf73' },
+  { n: 1, etiqueta: 'INTÉNTAO', cor: '#a97ae0' },
+  { n: 2, etiqueta: 'RECOÑÉCESE', cor: '#e8c547' },
+  { n: 3, etiqueta: 'DIO BEN!', cor: '#6fbf73' },
 ] as const
 
 export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
@@ -28,13 +30,17 @@ export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
   const temMalestar = cova.engine.getNodeState('malestar')?.state === 'unlocked'
 
   const palabraAmostra = ultima ?? cova.politica.ditas.at(-1) ?? null
-  const tierAmostra =
-    palabraAmostra === null
-      ? 0
-      : (cova.engine.getNodeState(idPalabra(palabraAmostra))?.currentTier ?? 0)
 
-  const estimulo = ESTIMULOS[cova.politica.estimulo]
+  const estimulo = ESTIMULOS[cova.politica.atencion.referente ?? 'nada']
   const sombras = sombrasAcesas(cova.engine)
+
+  const nodoAmostra = palabraAmostra === null ? null : idPalabra(palabraAmostra)
+  const comprension =
+    palabraAmostra === null ? 0 : comprensionDe(cova.politica.familiaridade, palabraAmostra)
+  const producion =
+    nodoAmostra === null ? 0 : (cova.engine.getNodeState(nodoAmostra)?.currentTier ?? 0)
+  const formaActual =
+    palabraAmostra === null ? '' : comoDi(palabraAmostra, sonsDominados(cova.engine))
 
   function ensinar(): void {
     const p = borrador.trim()
@@ -136,10 +142,13 @@ export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
         )}
       </p>
 
-      {/* Canto lle queda ao contexto. Sen isto a regra parece rota:
-          o coidador escribe, chega tarde e non entende por que. */}
+      {/* A ATENCIÓN, que decae. Non é un temporizador de todo-ou-nada:
+          canto máis chea estea, máis lle ensina cada palabra. */}
       <span className="contexto__reloxo" aria-hidden="true">
-        <span className="contexto__queda" style={{ width: `${restanteContexto(cova)}%` }} />
+        <span
+          className="contexto__queda"
+          style={{ width: `${cova.politica.atencion.forza}%` }}
+        />
       </span>
 
       <div className="ensinar">
@@ -166,45 +175,60 @@ export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
         </button>
       </div>
 
-      <ul className="tiers">
-        {TIERS.map((t) => (
-          <li key={t.n} className={`tier${tierAmostra >= t.n ? ' tier--feito' : ''}`}>
-            <span className="tier__n">{t.n}/3</span>
-            <span className="tier__barra">
-              <span
-                className="tier__cheo"
-                style={{
-                  width: tierAmostra >= t.n ? '100%' : '0%',
-                  background: t.cor,
-                }}
-              />
-            </span>
-            <span className="tier__etiqueta">
-              {t.etiqueta}
-              {t.n === 3 && tierAmostra >= 3 ? (
-                <>
-                  {' '}
-                  <span className="tier__estrela" key={palabraAmostra ?? ''}>
-                    ★
-                  </span>
-                </>
-              ) : null}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <div className="aprendizaxe">
+        <div className="aprendizaxe__fila">
+          <span className="aprendizaxe__nome">ENTENDE</span>
+          <span className="tier__barra">
+            <span
+              className="tier__cheo"
+              style={{ width: `${comprension}%`, background: '#5aa9e0' }}
+            />
+          </span>
+          <span className="aprendizaxe__valor">{comprension}%</span>
+        </div>
+
+        <ul className="tiers">
+          {TIERS.map((t) => (
+            <li key={t.n} className={`tier${producion >= t.n ? ' tier--feito' : ''}`}>
+              <span className="tier__n">{t.n}/3</span>
+              <span className="tier__barra">
+                <span
+                  className="tier__cheo"
+                  style={{ width: producion >= t.n ? '100%' : '0%', background: t.cor }}
+                />
+              </span>
+              <span className="tier__etiqueta">
+                {t.etiqueta}
+                {t.n === 3 && producion >= 3 ? (
+                  <>
+                    {' '}
+                    <span className="tier__estrela" key={palabraAmostra ?? ''}>
+                      ★
+                    </span>
+                  </>
+                ) : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {palabraAmostra !== null ? (
+          <p className="aprendizaxe__saida">
+            {producion === 0
+              ? comprension >= LIMIARES_PALABRA[0]
+                ? 'Enténdeo, pero aínda non lle sae.'
+                : 'Aínda non sabe que significa.'
+              : formaActual === palabraAmostra
+                ? `Dío ben: «${formaActual}»`
+                : `Sáelle «${formaActual === '' ? '…' : formaActual}»`}
+          </p>
+        ) : null}
+      </div>
+
     </section>
   )
 }
 
-/** Porcentaxe que lle queda ao estímulo activo. 0 = fóra de contexto. */
-function restanteContexto(cova: Cova): number {
-  const quedan = cova.politica.estimuloAte - cova.politica.momentos
-  if (cova.politica.estimulo === 'nada' || quedan <= 0) {
-    return 0
-  }
-  return Math.min(100, Math.round((quedan / DURACION_ESTIMULO) * 100))
-}
 /**
  * Que cara pon. A ORDE importa: o de arriba gaña. Durmir tapa todo o
  * demais, falar tapa o malestar (é o seu momento), e «apagado» vai antes

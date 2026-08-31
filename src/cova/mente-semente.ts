@@ -30,6 +30,9 @@ export const REXIONS = {
   // aquí: nace coa primeira leccion da ausencia (ver sombras.ts). Un bebe
   // ben coidado nunca chega a ver esta rexion.
   sombra: 'sombra',
+  // Igual cá SOMBRA: a rexión dos SONS nace co primeiro son que oe, non
+  // na semente. Ao nacer, o bebé aínda non oíu ningún.
+  sons: 'sons',
 } as const
 
 export type RexionId = (typeof REXIONS)[keyof typeof REXIONS]
@@ -41,6 +44,7 @@ export const COR_REXION: Record<RexionId, string> = {
   conceptos: '#6fbf73',
   memorias: '#5aa9e0',
   sombra: '#8a8f9c',
+  sons: '#c8a15a',
 }
 
 export const ETIQUETA_REXION: Record<RexionId, string> = {
@@ -50,6 +54,7 @@ export const ETIQUETA_REXION: Record<RexionId, string> = {
   conceptos: 'CONCEPTOS',
   memorias: 'MEMORIAS',
   sombra: 'SOMBRA',
+  sons: 'SONS',
 }
 
 /**

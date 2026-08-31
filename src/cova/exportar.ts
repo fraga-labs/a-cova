@@ -8,7 +8,8 @@
 // volvelo cargar sen perder nada.
 
 import type { TreeDef, TreeState } from '@yggdrasil-forge/core'
-import type { Acontecemento, EstadoPolitica } from './politica.js'
+import type { Acontecemento } from './acontecementos.js'
+import type { EstadoPolitica } from './politica.js'
 
 export const EDITOR_URL = 'https://fraga-labs.github.io/yggdrasil-forge/app/'
 

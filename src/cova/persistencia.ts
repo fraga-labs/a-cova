@@ -4,9 +4,13 @@
 // EXPORTAR BEBÉ como gardado de verdade.
 
 import type { TreeDef, TreeState } from '@yggdrasil-forge/core'
-import type { Acontecemento, EstadoPolitica } from './politica.js'
+import type { Acontecemento } from './acontecementos.js'
+import type { EstadoPolitica } from './politica.js'
 
-export const CLAVE = 'a-cova:v1'
+// v2: a política cambiou de forma coa reforma da linguaxe (fóra
+// `estimulo`/`frescuras`, dentro `atencion`). A clave vai versionada
+// precisamente para isto: un gardado vello ignórase en vez de romper.
+export const CLAVE = 'a-cova:v2'
 
 export interface Gardado {
   readonly clave: typeof CLAVE

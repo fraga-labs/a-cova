@@ -918,3 +918,34 @@ body {
     opacity: 1;
   }
 }
+
+/* aprender: comprensión (continua) e produción (por chanzos) */
+
+.aprendizaxe {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.aprendizaxe__fila {
+  display: grid;
+  grid-template-columns: 4.6rem 1fr 2.6rem;
+  align-items: center;
+  gap: 6px;
+}
+
+.aprendizaxe__nome {
+  color: var(--memorias);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.aprendizaxe__valor {
+  text-align: right;
+  color: var(--texto-suave);
+}
+
+.aprendizaxe__saida {
+  margin: 2px 0 0;
+  color: var(--acento);
+}

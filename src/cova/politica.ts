@@ -30,100 +30,45 @@ import {
   SOIDADE_POR_DESATENCION,
   SOIDADE_QUE_SANDA,
 } from './drives.js'
-import { CAMPOS, type EstimuloId, camposDe, casaConEstimulo, normalizar } from './lexico.js'
+import { type Acontecemento, acontecemento } from './acontecementos.js'
+import { CAMPOS, camposDe } from './lexico.js'
+import { type Atencion, type Familiaridade, SEN_ATENCION } from './linguaxe.js'
 import { PREFIXO, REXIONS, TAG_AUTO } from './mente-semente.js'
 import { PREFIXO_SOMBRA, SOMBRAS } from './sombras.js'
 
 // ── Estado da política (o que o motor non ten onde gardar) ──
-
-/**
- * Frescura dunha palabra: 0-100. Decae por momento. Ao chegar a 0, a
- * palabra esquécese (baixa un tier). Vive aquí e non no `TreeState`
- * porque non hai API pública para escribir estado por-nodo do
- * consumidor (achado 3).
- */
-export type Frescuras = Record<string, number>
 
 export interface EstadoPolitica {
   /** Momentos de reloxo transcorridos desde o nacemento. */
   readonly momentos: number
   /** Día da cova (1-indexado). */
   readonly dia: number
-  /** Que está a pasar agora mesmo. Define a «repetición en contexto». */
-  readonly estimulo: EstimuloId
-  /** Momento no que o estímulo actual deixa de estar activo. */
-  readonly estimuloAte: number
-  readonly frescuras: Frescuras
-  /** Palabras (normalizadas) que xa chegaron a 3/3 algunha vez. */
+  /**
+   * A que se está atendendo, e canta atención queda. Substitúe o
+   * temporizador de estímulo da v1: agora a atención DECAE, e ensinar
+   * axiña vale máis ca ensinar tarde (docs/design/LINGUAXE.md, capa 1).
+   */
+  readonly atencion: Atencion
+  /**
+   * Canto sabe de cada nodo: familiaridade nos sons, comprensión nas
+   * palabras. Debería vivir no motor (`progress`), pero non se pode
+   * — ver docs/ACHADOS.md, achado 7.
+   */
+  readonly familiaridade: Familiaridade
+  /** Palabras (normalizadas) que xa chegou a dicir ben algunha vez. */
   readonly ditas: readonly string[]
 }
 
 export const ESTADO_INICIAL: EstadoPolitica = {
   momentos: 0,
   dia: 1,
-  estimulo: 'nada',
-  estimuloAte: 0,
-  frescuras: {},
+  atencion: SEN_ATENCION,
+  familiaridade: {},
   ditas: [],
 }
 
-/**
- * Momentos que dura un estímulo activo tras unha acción do coidador.
- * Oito (uns 32 s) porque o coidador ten que escribir a palabra: con
- * catro chegaba tarde sempre e a regra do contexto parecía rota.
- */
-export const DURACION_ESTIMULO = 8
-
-/** Canto decae a frescura dunha palabra por momento. */
-export const DECAEMENTO = 4
-
-/** Frescura que recupera unha palabra ao ser ensinada de novo. */
-export const REFORZO = 100
-
-// ── Acontecementos ──
-
-export type TipoAcontecemento =
-  | 'accion'
-  | 'caca'
-  | 'chorar'
-  | 'nace-palabra'
-  | 'oe'
-  | 'entende'
-  | 'di'
-  | 'dia'
-  | 'nace-concepto'
-  | 'nace-memoria'
-  | 'esquece'
-  | 'auto'
-  | 'sombra'
-
-export interface Acontecemento {
-  readonly id: string
-  readonly tipo: TipoAcontecemento
-  /** Hora real, como no mockup: horas de verdade, non ticks abstractos. */
-  readonly cando: number
-  readonly texto: string
-  /** Nodo implicado, se o hai. Permite acender o nodo no grafo. */
-  readonly nodeId?: string
-}
-
-let contadorAcontecemento = 0
-
-export function acontecemento(
-  tipo: TipoAcontecemento,
-  texto: string,
-  agora: number,
-  nodeId?: string,
-): Acontecemento {
-  contadorAcontecemento += 1
-  return {
-    id: `ac-${agora}-${contadorAcontecemento}`,
-    tipo,
-    cando: agora,
-    texto,
-    ...(nodeId !== undefined && { nodeId }),
-  }
-}
+// Os acontecementos viven en `acontecementos.ts`: emítenos tanto este
+// módulo como `linguaxe.ts`, e telos aquí faría un ciclo de imports.
 
 // ── Regra 1: autonomía ──
 
@@ -194,134 +139,8 @@ function textoAceso(nodeId: string): string {
   }
 }
 
-// ── Regra 2 e 3: nacemento de palabra e tiers ──
-
-export interface ResultadoEnsinanza {
-  readonly acontecementos: readonly Acontecemento[]
-  readonly frescuras: Frescuras
-  readonly ditas: readonly string[]
-  /** Id do nodo-palabra tocado (para seleccionalo no grafo). */
-  readonly nodeId: string
-  /** Tier no que quedou a palabra tras esta ensinanza. */
-  readonly tier: number
-  /** `true` se a palabra chegou a 3/3 NESTA ensinanza. */
-  readonly dita: boolean
-}
-
-export function idPalabra(palabra: string): string {
-  return `${PREFIXO.palabra}${normalizar(palabra)}`
-}
-
-/**
- * Ensinar unha palabra. Se non existe, NACE (nodo + aresta desde a voz).
- * Se existe, sobe un tier — pero só se hai repetición EN CONTEXTO
- * (a palabra casa co estímulo activo). Se non, o bebé só a oe outra vez.
- */
-export async function ensinarPalabra(
-  engine: TreeEngine,
-  estado: EstadoPolitica,
-  palabraCru: string,
-  agora: number,
-): Promise<ResultadoEnsinanza | null> {
-  const palabra = normalizar(palabraCru)
-  if (palabra.length === 0) {
-    return null
-  }
-
-  const nodeId = idPalabra(palabra)
-  const feitos: Acontecemento[] = []
-  const existe = engine.getTreeDef().nodes.some((n) => n.id === nodeId)
-
-  if (!existe) {
-    const nacemento = await engine.applyChanges([
-      {
-        type: 'add_node',
-        node: {
-          id: nodeId,
-          type: 'small',
-          group: REXIONS.linguaxe,
-          icon: '🗣',
-          color: '#a97ae0',
-          shape: 'hexagon',
-          label: { gl: palabra },
-          description: { gl: `Unha palabra que lle ensinaches o día ${estado.dia}.` },
-          maxTier: 3,
-          tags: [REXIONS.linguaxe, 'palabra'],
-        },
-      },
-      {
-        type: 'add_edge',
-        edge: {
-          id: `e-verbo-${nodeId}`,
-          source: 'verbo',
-          target: nodeId,
-          type: 'dependency',
-        },
-      },
-    ])
-    if (!isOk(nacemento)) {
-      return null
-    }
-    feitos.push(acontecemento('nace-palabra', `naceu a palabra «${palabra}»`, agora, nodeId))
-  }
-
-  const instancia = engine.getNodeState(nodeId)
-  const tierActual = instancia?.currentTier ?? 0
-  const enContexto = casaConEstimulo(palabra, estado.estimulo)
-
-  // 1/3 sempre se pode acadar: oíla non require contexto.
-  // 2/3 e 3/3 SÓ con repetición en contexto. Esa é a regra.
-  const podeSubir = tierActual === 0 || enContexto
-  let tierFinal = tierActual
-
-  if (podeSubir && tierActual < 3) {
-    const subida = await engine.unlock(nodeId)
-    if (isOk(subida)) {
-      tierFinal = subida.value.tier
-      feitos.push(
-        acontecemento(
-          tipoDeTier(tierFinal),
-          `${textoTier(tierFinal)} «${palabra}» ${tierFinal}/3`,
-          agora,
-          nodeId,
-        ),
-      )
-    }
-  } else if (tierActual >= 3) {
-    feitos.push(acontecemento('oe', `repetiu «${palabra}» — xa a sabe`, agora, nodeId))
-  } else {
-    feitos.push(acontecemento('oe', `oíu «${palabra}» fóra de contexto`, agora, nodeId))
-  }
-
-  const frescuras: Frescuras = { ...estado.frescuras, [nodeId]: REFORZO }
-  const dita = tierFinal === 3 && tierActual < 3
-  const ditas = dita ? [...estado.ditas, palabra] : estado.ditas
-
-  if (dita) {
-    feitos.push(acontecemento('di', `DIXO «${palabra}»!`, agora, nodeId))
-  }
-
-  return { acontecementos: feitos, frescuras, ditas, nodeId, tier: tierFinal, dita }
-}
-
-/** O chanzo determina o tipo de acontecemento — e con el, o son. */
-function tipoDeTier(tier: number): TipoAcontecemento {
-  if (tier === 1) {
-    return 'oe'
-  }
-  return tier === 2 ? 'entende' : 'di'
-}
-
-function textoTier(tier: number): string {
-  switch (tier) {
-    case 1:
-      return 'oíu'
-    case 2:
-      return 'entendeu'
-    default:
-      return 'di'
-  }
-}
+// As regras 2 e 3 (nacemento de palabras, sons, comprensión e
+// produción) viven en `linguaxe.ts`.
 
 // ── Regra 4: nacemento de conceptos ──
 
@@ -447,54 +266,8 @@ export async function nacerMemoria(
   return [acontecemento('nace-memoria', `gardou unha memoria: ${etiqueta}`, agora, nodeId)]
 }
 
-// ── Regra 5: o esquecemento ──
-
-/**
- * Decae a frescura de todas as palabras. As que chegan a cero baixan un
- * tier (`lockOneTier`); se xa estaban en 1/3, apáganse de todo. Non hai
- * maxia: é a curva do esquecemento como configuración.
- */
-export async function esquecer(
-  engine: TreeEngine,
-  frescuras: Frescuras,
-  agora: number,
-): Promise<{ frescuras: Frescuras; acontecementos: readonly Acontecemento[] }> {
-  const feitos: Acontecemento[] = []
-  const seguintes: Frescuras = {}
-
-  for (const [nodeId, valor] of Object.entries(frescuras)) {
-    const instancia = engine.getNodeState(nodeId)
-    if (instancia === null || instancia.currentTier === 0) {
-      continue
-    }
-    const novo = valor - DECAEMENTO
-    if (novo > 0) {
-      seguintes[nodeId] = novo
-      continue
-    }
-
-    const r = await engine.lockOneTier(nodeId)
-    const palabra = nodeId.slice(PREFIXO.palabra.length)
-    if (isOk(r)) {
-      const restante = engine.getNodeState(nodeId)?.currentTier ?? 0
-      feitos.push(
-        acontecemento(
-          'esquece',
-          restante === 0
-            ? `esqueceu «${palabra}» de todo`
-            : `vaille esquecendo «${palabra}» (${restante}/3)`,
-          agora,
-          nodeId,
-        ),
-      )
-      if (restante > 0) {
-        seguintes[nodeId] = REFORZO
-      }
-    }
-  }
-
-  return { frescuras: seguintes, acontecementos: feitos }
-}
+// A regra 5 (esquecemento) vive agora en `linguaxe.ts`: o que decae é a
+// COMPRENSIÓN da palabra, non un contador aparte.
 
 // ── A conta da ausencia ──
 

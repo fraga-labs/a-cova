@@ -126,6 +126,51 @@ o consumidor xestione o seu propio estado (é defendible; só hai que dicilo).
 
 ---
 
+## Achado 7 — `setProgress` non ve os nodos nacidos en runtime · **bloqueante**
+
+**Esperabamos**: poder usar as DÚAS pistas que un `NodeDef` ten —`progress` (0-100, continuo) e
+`currentTier` (discreto)— no mesmo nodo. Era a peza central do deseño da linguaxe v2
+(`docs/design/LINGUAXE.md`): comprensión como progreso, produción como rangos. As dúas viaxarían no
+documento exportado sen que tivésemos que inventar nada.
+
+**Atopamos**: `setProgress` devolve `NODE_NOT_FOUND` nun nodo que existe. `getNodeState` atópao,
+`getTreeDef()` lévao, `unlock` funciona nel — pero `setProgress` non. A causa está no construtor de
+`TreeEngine`:
+
+```ts
+this.progressManager = new ProgressManager({
+  treeDef: this.store.getTreeDef(),   // ← unha COPIA, tomada unha soa vez
+  store: this.store,
+  ...
+})
+```
+
+Todos os demais compoñentes reciben o `store` e len a través del; `ProgressManager` recibe ademais
+un `treeDef` **conxelado no momento da construción**, e `setProgress` resolve o `NodeDef` contra ese
+(`findNodeDef(this.context.treeDef, nodeId)`). Como `applyChanges` substitúe a TreeDef dentro do
+store, o `ProgressManager` queda desactualizado para sempre.
+
+Consecuencia: `progress`, `progressMilestones`, `getReachedMilestones` e `progressSource` son
+**inutilizables en calquera nodo creado en runtime**. Para un consumidor cuxo caso de uso É o
+crecemento en runtime, iso é a metade do contrato de progreso apagada.
+
+**Como o rodeamos**: a familiaridade (dos sons) e a comprensión (das palabras) viven en
+`EstadoPolitica.familiaridade`, en React, e persístense ao lado do `TreeState`. Os RANGOS si se
+gardan no motor, que funcionan ben. É o mesmo rodeo có achado 6, agora nun sitio onde doe máis:
+o documento exportado leva a produción no seu sitio pero a comprensión en `metadata`.
+
+Isto obrigou tamén a quitar os `prerequisites` de tipo `progress_min` que apuntaban ao propio nodo:
+como o progreso nunca sobe, o prerequisito nunca se cumpría e `unlock` fallaba sempre. Era a parte
+máis bonita do deseño — o limiar do primeiro rango declarado no propio documento en vez de escondido
+no código — e houbo que tirala.
+
+**Custo**: alto. É o primeiro achado que **cambia o deseño** en vez de só incomodar.
+
+**Petición razoable**: que `ProgressManager` lea `this.context.store.getTreeDef()` no momento de
+usalo, igual que fan os demais. Unha liña, retrocompatible, e devolve un contrato enteiro.
+
+---
+
 ## Nota — o que SI deu o motor sen pedirlle nada
 
 Convén deixar constancia tamén do contrario, porque un documento que só recolle queixas mente.

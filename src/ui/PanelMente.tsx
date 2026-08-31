@@ -12,6 +12,7 @@ import { temaCova } from './tema.js'
 
 const ORDE_REXIONS: readonly RexionId[] = [
   REXIONS.corpo,
+  REXIONS.sons,
   REXIONS.linguaxe,
   REXIONS.afectos,
   REXIONS.conceptos,

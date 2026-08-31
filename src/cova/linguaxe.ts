@@ -1,0 +1,419 @@
+// ── INICIO: a linguaxe ──
+// CAPAS 0, 1 e 2 do deseño (docs/design/LINGUAXE.md).
+//
+// A v1 tiña unha soa regra —palabra + estímulo, tres veces, xa a sabe— e
+// mesturaba cinco cousas nun contador. Isto sepáraas:
+//
+//   SONS         cada fonema é un nodo cos seus rangos. As palabras que
+//                lle saen están limitadas polos sons que domina.
+//   ATENCIÓN     non hai temporizador: hai unha cousa á que se atende, e
+//                a atención DECAE. Ensinar canto antes vale máis.
+//   COMPRENSIÓN  0-100 por palabra. Continua, decae.
+//   PRODUCIÓN    `currentTier` do nodo. Discreta, son fitos.
+//
+// A idea era levar as dúas pistas no propio nodo: `progress` para a
+// comprensión e `currentTier` para a produción. Non se puido: o
+// `ProgressManager` do motor gárdase unha copia da TreeDef ao construírse
+// e non ve os nodos que nacen despois, así que `setProgress` devolve
+// NODE_NOT_FOUND en todo o que medra en runtime — que é TODO o desta
+// capa (ver docs/ACHADOS.md, achado 7, o primeiro que nos cambia o
+// deseño). Os RANGOS si funcionan e quedan no motor; a familiaridade e a
+// comprensión viven en `EstadoPolitica.familiaridade` e persístense ao
+// lado. En canto o motor arranxe iso, isto volve ao seu sitio.
+
+import type { TreeEngine } from '@yggdrasil-forge/core'
+import { isOk } from '@yggdrasil-forge/core'
+import { comoDi, dia, gananciaSon, segmentar } from './fonoloxia.js'
+import { type EstimuloId, casaConEstimulo, normalizar } from './lexico.js'
+import { PREFIXO, REXIONS } from './mente-semente.js'
+import { type Acontecemento, acontecemento } from './acontecementos.js'
+
+export const PREFIXO_SON = 'son:'
+
+// ── Limiares ──
+
+/** Familiaridade cun son a partir da cal se acada cada rango. */
+export const LIMIARES_SON = [20, 55, 90] as const
+
+/** Comprensión a partir da cal se acada cada rango de produción. */
+export const LIMIARES_PALABRA = [35, 70, 95] as const
+
+/**
+ * Histérese: un rango gáñase ao chegar ao limiar, pero só se PERDE ao
+ * caer esta marxe por debaixo. Sen ela, unha palabra recén aprendida
+ * oscilaba entre «dío ben» e «vaille esquecendo» a cada momento, porque
+ * o esquecemento baixáballe un punto xusto despois de gañala.
+ */
+export const MARXE_ESQUECEMENTO = 12
+
+/** Comprensión que dá unha exposición perfecta (atención ao 100). */
+const GANANCIA_BASE = 30
+
+/** Comprensión que se perde por momento sen reforzo. */
+export const ESQUECEMENTO = 1
+
+/** Canto decae a atención por momento. Oito momentos ata cero. */
+export const DECAEMENTO_ATENCION = 12
+
+/**
+ * Canto sabe o bebé de cada nodo, indexado por `nodeId`: familiaridade
+ * nos sons, comprensión nas palabras. Vive fóra do motor por obriga, non
+ * por gusto (achado 7).
+ */
+export type Familiaridade = Record<string, number>
+
+export interface Atencion {
+  /** A que se está atendendo agora mesmo. `null` = a nada. */
+  readonly referente: EstimuloId | null
+  /** 0-100. Ensinar con pouca atención ensina pouco. */
+  readonly forza: number
+}
+
+export const SEN_ATENCION: Atencion = { referente: null, forza: 0 }
+
+export function idPalabra(palabra: string): string {
+  return `${PREFIXO.palabra}${normalizar(palabra)}`
+}
+
+export function idSon(son: string): string {
+  return `${PREFIXO_SON}${son}`
+}
+
+// ── CAPA 0: os sons ──
+
+/** Sons que o bebé xa é quen de dicir (rango 3). */
+export function sonsDominados(engine: TreeEngine): ReadonlySet<string> {
+  const dominados = new Set<string>()
+  for (const nodo of engine.getTreeDef().nodes) {
+    if (!nodo.id.startsWith(PREFIXO_SON)) {
+      continue
+    }
+    if ((engine.getNodeState(nodo.id)?.currentTier ?? 0) >= 3) {
+      dominados.add(nodo.id.slice(PREFIXO_SON.length))
+    }
+  }
+  return dominados
+}
+
+/**
+ * Oír unha palabra. Isto pasa SEMPRE, con atención ou sen ela: aínda que
+ * o bebé non saiba que significa, os sons entran. Por iso ensinar fóra
+ * de contexto deixa de ser tempo perdido.
+ */
+async function oirSons(
+  engine: TreeEngine,
+  familiaridade: Familiaridade,
+  palabra: string,
+  agora: number,
+): Promise<{ familiaridade: Familiaridade; acontecementos: readonly Acontecemento[] }> {
+  const feitos: Acontecemento[] = []
+  const seguinte: Familiaridade = { ...familiaridade }
+  let haiGrupo = (engine.getTreeDef().groups ?? []).some((g) => g.id === REXIONS.sons)
+
+  // Sen repetir: oír «mama» conta unha vez por /m/ e unha por /a/, non dúas.
+  const sons = [...new Set(segmentar(palabra))]
+
+  for (const son of sons) {
+    const nodeId = idSon(son)
+    const existe = engine.getTreeDef().nodes.some((n) => n.id === nodeId)
+
+    if (!existe) {
+      const nacemento = await engine.applyChanges([
+        // O grupo nace co primeiro son, non na semente: unha rexión
+        // baleira sería unha promesa antes de tempo.
+        ...(haiGrupo
+          ? []
+          : ([
+              {
+                type: 'add_group',
+                group: {
+                  id: REXIONS.sons,
+                  label: { gl: 'SONS' },
+                  color: '#c8a15a',
+                  anchorNodeId: nodeId,
+                },
+              },
+            ] as const)),
+        {
+          type: 'add_node',
+          node: {
+            id: nodeId,
+            type: 'small',
+            group: REXIONS.sons,
+            icon: son,
+            color: '#c8a15a',
+            label: { gl: son },
+            description: { gl: 'Un son. Óeo, distíngueo e ao final sabe dicilo.' },
+            maxTier: 3,
+            tags: [REXIONS.sons, 'son'],
+          },
+        },
+        {
+          type: 'add_edge',
+          edge: { id: `e-verbo-${nodeId}`, source: 'verbo', target: nodeId, type: 'path' },
+        },
+      ])
+      if (!isOk(nacemento)) {
+        continue
+      }
+      // Á primeira que sae ben, o grupo xa está: se non se marca aquí, a
+      // segunda volta do bucle tenta crealo outra vez, a transacción
+      // rexéitase e o resto dos sons non chegan a nacer nunca.
+      haiGrupo = true
+    }
+
+    const antes = seguinte[nodeId] ?? 0
+    const despois = Math.min(100, antes + gananciaSon(son))
+    seguinte[nodeId] = despois
+
+    const rangoAntes = engine.getNodeState(nodeId)?.currentTier ?? 0
+    const rangoAgora = rangoPara(despois, LIMIARES_SON)
+    for (let t = rangoAntes; t < rangoAgora; t += 1) {
+      await engine.unlock(nodeId)
+    }
+    if (rangoAgora > rangoAntes && rangoAgora === 3) {
+      feitos.push(acontecemento('son', `xa sabe dicir o son «${son}»`, agora, nodeId))
+    }
+  }
+
+  return { familiaridade: seguinte, acontecementos: feitos }
+}
+
+/** A que rango corresponde un progreso dado. */
+function rangoPara(progreso: number, limiares: readonly number[]): number {
+  let rango = 0
+  for (const limiar of limiares) {
+    if (progreso >= limiar) {
+      rango += 1
+    }
+  }
+  return rango
+}
+
+// ── CAPA 2: ensinar ──
+
+export interface ResultadoEnsinanza {
+  readonly acontecementos: readonly Acontecemento[]
+  readonly familiaridade: Familiaridade
+  readonly nodeId: string
+  /** 0-100. */
+  readonly comprension: number
+  /** 0-3. */
+  readonly producion: number
+  /** Como lle sae a palabra hoxe. `''` = aínda non lle sae. */
+  readonly forma: string
+  /** `true` se NESTA ensinanza chegou a dicila ben por primeira vez. */
+  readonly perfecta: boolean
+  readonly ditas: readonly string[]
+}
+
+export async function ensinarPalabra(
+  engine: TreeEngine,
+  atencion: Atencion,
+  familiaridade: Familiaridade,
+  ditas: readonly string[],
+  palabraCru: string,
+  agora: number,
+): Promise<ResultadoEnsinanza | null> {
+  const palabra = normalizar(palabraCru)
+  if (palabra.length === 0 || segmentar(palabra).length === 0) {
+    return null
+  }
+
+  const feitos: Acontecemento[] = []
+
+  // 1. Os sons entran sempre.
+  const oido = await oirSons(engine, familiaridade, palabra, agora)
+  feitos.push(...oido.acontecementos)
+  const seguinte: Familiaridade = { ...oido.familiaridade }
+
+  // 2. O nodo-palabra nace á primeira, aínda que non signifique nada
+  //    aínda. Un nodo a 0% de comprensión é exactamente iso: unha
+  //    palabra que oíu e non entende. E vese no grafo.
+  const nodeId = idPalabra(palabra)
+  if (!engine.getTreeDef().nodes.some((n) => n.id === nodeId)) {
+    const nacemento = await engine.applyChanges([
+      {
+        type: 'add_node',
+        node: {
+          id: nodeId,
+          type: 'small',
+          group: REXIONS.linguaxe,
+          icon: '🗣',
+          color: '#a97ae0',
+          shape: 'hexagon',
+          label: { gl: palabra },
+          description: { gl: `Unha palabra que lle ensinaches.` },
+          maxTier: 3,
+          tags: [REXIONS.linguaxe, 'palabra'],
+        },
+      },
+      {
+        type: 'add_edge',
+        edge: { id: `e-verbo-${nodeId}`, source: 'verbo', target: nodeId, type: 'dependency' },
+      },
+    ])
+    if (!isOk(nacemento)) {
+      return null
+    }
+    feitos.push(acontecemento('nace-palabra', `oíu por primeira vez «${palabra}»`, agora, nodeId))
+  }
+
+  // 3. CAPA 1: só se comprende o que se di mentres se atende ao mesmo.
+  const enContexto =
+    atencion.referente !== null && casaConEstimulo(palabra, atencion.referente) && atencion.forza > 0
+
+  const antes = seguinte[nodeId] ?? 0
+  let comprension = antes
+
+  if (enContexto) {
+    // Rendementos decrecentes: as primeiras veces ensinan moito máis cás
+    // últimas, e a atención frouxa ensina menos.
+    const ganancia = Math.max(
+      2,
+      Math.round(GANANCIA_BASE * (atencion.forza / 100) * (1 - antes / 140)),
+    )
+    comprension = Math.min(100, antes + ganancia)
+    seguinte[nodeId] = comprension
+    // Se xa estaba ao 100 non hai nada que contar: senón a liña temporal
+    // enchíase de «vai entendendo (100%)» unha e outra vez.
+    if (comprension > antes) {
+      feitos.push(
+        acontecemento('entende', `vai entendendo «${palabra}» (${comprension}%)`, agora, nodeId),
+      )
+    }
+  } else {
+    feitos.push(
+      acontecemento(
+        'oe',
+        atencion.referente === null
+          ? `oíu «${palabra}», pero non estabades a nada`
+          : `oíu «${palabra}» fóra de contexto`,
+        agora,
+        nodeId,
+      ),
+    )
+  }
+
+  // 4. A produción: pide comprensión E ter os sons.
+  const dominados = sonsDominados(engine)
+  const forma = comoDi(palabra, dominados)
+  const producionAntes = engine.getNodeState(nodeId)?.currentTier ?? 0
+  const producionQuere = rangoDeProducion(comprension, palabra, dominados)
+
+  for (let t = producionAntes; t < producionQuere; t += 1) {
+    await engine.unlock(nodeId)
+  }
+  const producion = engine.getNodeState(nodeId)?.currentTier ?? producionAntes
+
+  if (producion > producionAntes) {
+    feitos.push(
+      acontecemento(
+        producion >= 3 ? 'di' : 'entende',
+        textoProducion(producion, palabra, forma),
+        agora,
+        nodeId,
+      ),
+    )
+  }
+
+  const perfecta = producion >= 3 && producionAntes < 3
+  return {
+    acontecementos: feitos,
+    familiaridade: seguinte,
+    nodeId,
+    comprension,
+    producion,
+    forma,
+    perfecta,
+    ditas: perfecta ? [...ditas, palabra] : ditas,
+  }
+}
+
+/**
+ * O rango de produción que lle corresponde. O terceiro (dicila ben) pide
+ * as dúas cousas: comprensión completa E ter todos os sons. Por iso
+ * «rr» ou «ll» atrasan unha palabra que xa entende perfectamente.
+ */
+export function rangoDeProducion(
+  comprension: number,
+  palabra: string,
+  dominados: ReadonlySet<string>,
+  marxe = 0,
+): number {
+  const porComprension = rangoPara(
+    comprension,
+    LIMIARES_PALABRA.map((l) => l - marxe),
+  )
+  if (porComprension < 3) {
+    return porComprension
+  }
+  return dia(palabra, dominados) ? 3 : 2
+}
+
+function textoProducion(producion: number, palabra: string, forma: string): string {
+  if (producion >= 3) {
+    return `DI «${palabra}» ben!`
+  }
+  if (forma === '') {
+    return `intenta dicir «${palabra}» e sáelle un balbucido`
+  }
+  return `intenta dicir «${palabra}» e sáelle «${forma}»`
+}
+
+// ── O esquecemento, agora sobre a comprensión ──
+
+/**
+ * A comprensión decae soa. Cando cae por baixo do limiar dun rango, o
+ * rango pérdese: primeiro deixa de dicila ben, despois deixa de dicila.
+ * Os SONS non se esquecen — unha vez que sabes facer /r/, sabes facelo.
+ */
+export async function esquecer(
+  engine: TreeEngine,
+  familiaridade: Familiaridade,
+  agora: number,
+): Promise<{ familiaridade: Familiaridade; acontecementos: readonly Acontecemento[] }> {
+  const feitos: Acontecemento[] = []
+  const seguinte: Familiaridade = { ...familiaridade }
+  const dominados = sonsDominados(engine)
+
+  for (const nodo of engine.getTreeDef().nodes) {
+    if (!nodo.id.startsWith(PREFIXO.palabra)) {
+      continue
+    }
+    const antes = seguinte[nodo.id] ?? 0
+    if (antes <= 0) {
+      continue
+    }
+    const despois = Math.max(0, antes - ESQUECEMENTO)
+    seguinte[nodo.id] = despois
+
+    const palabra = nodo.id.slice(PREFIXO.palabra.length)
+    const producionAntes = engine.getNodeState(nodo.id)?.currentTier ?? 0
+    // Ao PERDER, os limiares baixan pola marxe de histérese.
+    const producionAgora = rangoDeProducion(despois, palabra, dominados, MARXE_ESQUECEMENTO)
+
+    for (let t = producionAntes; t > producionAgora; t -= 1) {
+      await engine.lockOneTier(nodo.id)
+    }
+    if (producionAgora < producionAntes) {
+      feitos.push(
+        acontecemento(
+          'esquece',
+          producionAgora === 0 ? `xa non lle sae «${palabra}»` : `vaille esquecendo «${palabra}»`,
+          agora,
+          nodo.id,
+        ),
+      )
+    }
+  }
+
+  return { familiaridade: seguinte, acontecementos: feitos }
+}
+
+/** Canto entende dunha palabra, 0-100. */
+export function comprensionDe(familiaridade: Familiaridade, palabra: string): number {
+  return familiaridade[idPalabra(palabra)] ?? 0
+}
+
+// ── FIN: a linguaxe ──

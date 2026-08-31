@@ -4,6 +4,8 @@
 // que di que palabras CASAN con que estímulo, e que campos semánticos
 // poden dar lugar a un concepto. Nada máis. Está aquí á vista a propósito.
 
+import { senTil } from './sentil.js'
+
 /** Os estímulos que o coidador pode proxectar na cova. */
 export type EstimuloId = 'fame' | 'auga' | 'sono' | 'xogo' | 'amor' | 'caca' | 'nada'
 
@@ -101,14 +103,11 @@ export const CAMPOS: readonly CampoSemantico[] = [
 /**
  * Normaliza unha palabra do coidador: minúsculas, sen espazos de sobra
  * e sen acentos. Sen acentos a propósito — o coidador escribe rápido e
- * «mamá» e «mama» son a mesma palabra para o bebé.
+ * «mamá» e «mama» son a mesma palabra para o bebé. O «ñ» SI se
+ * conserva: non é un «n» con adorno (ver `sentil.ts`).
  */
 export function normalizar(palabra: string): string {
-  return palabra
-    .trim()
-    .toLocaleLowerCase('gl')
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
+  return senTil(palabra.trim())
 }
 
 /** `true` se a palabra casa co estímulo activo (repetición EN CONTEXTO). */
