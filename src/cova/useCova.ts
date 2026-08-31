@@ -1,0 +1,333 @@
+// ── INICIO: useCova ──
+// O nervio: xunta o motor (TreeEngine), o reloxo do corpo e a política
+// de crecemento nun só hook. Toda a lóxica de regras vive en
+// `politica.ts`; aquí só está o cableado con React.
+
+import { TreeEngine } from '@yggdrasil-forge/core'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import {
+  DRIVE_SPECS,
+  type DriveId,
+  MOMENTOS_POR_DIA,
+  MOMENTO_MS,
+} from './drives.js'
+import type { EstimuloId } from './lexico.js'
+import { menteSemente } from './mente-semente.js'
+import { gardar, recuperar } from './persistencia.js'
+import {
+  type Acontecemento,
+  DURACION_ESTIMULO,
+  ESTADO_INICIAL,
+  type EstadoPolitica,
+  acontecemento,
+  ensinarPalabra,
+  esquecer,
+  limparCaca,
+  nacerMemoria,
+  programarDixestion,
+  reconciliarAutonomos,
+  xerarConceptos,
+} from './politica.js'
+
+const MAX_ACONTECEMENTOS = 60
+
+export type AccionId = 'alimentar' | 'limpar' | 'xogar' | 'aloumiñar' | 'durmir'
+
+export interface Accion {
+  readonly id: AccionId
+  readonly etiqueta: string
+  readonly icona: string
+  readonly estimulo: EstimuloId
+  /** Deltas que a acción aplica aos drives. */
+  readonly deltas: Partial<Record<DriveId, number>>
+  readonly di: string
+}
+
+export const ACCIONS: readonly Accion[] = [
+  {
+    id: 'alimentar',
+    etiqueta: 'ALIMENTAR',
+    icona: '🍼',
+    estimulo: 'fame',
+    deltas: { fame: -38, enerxia: +8 },
+    di: 'deuslle de comer',
+  },
+  {
+    id: 'limpar',
+    etiqueta: 'LIMPAR',
+    icona: '🧼',
+    estimulo: 'auga',
+    deltas: { sucidade: -100, apego: +5 },
+    di: 'limpáchelo',
+  },
+  {
+    id: 'xogar',
+    etiqueta: 'XOGAR',
+    icona: '🎈',
+    estimulo: 'xogo',
+    deltas: { curiosidade: +20, enerxia: -10, fame: +6, apego: +6 },
+    di: 'xogastes xuntos',
+  },
+  {
+    id: 'aloumiñar',
+    etiqueta: 'ALOUMIÑAR',
+    icona: '🤗',
+    estimulo: 'amor',
+    deltas: { apego: +14, curiosidade: +4 },
+    di: 'un aloumiño',
+  },
+  {
+    id: 'durmir',
+    etiqueta: 'DORMIR',
+    icona: '🌙',
+    estimulo: 'sono',
+    deltas: { enerxia: +42, fame: +12 },
+    di: 'botou un sono',
+  },
+]
+
+export interface Cova {
+  readonly engine: TreeEngine
+  readonly drives: Readonly<Record<string, number>>
+  readonly politica: EstadoPolitica
+  readonly acontecementos: readonly Acontecemento[]
+  readonly nome: string
+  readonly seleccionado: string | null
+  readonly di: string | null
+  readonly ocupado: boolean
+  readonly facer: (id: AccionId) => void
+  readonly ensinar: (palabra: string) => void
+  readonly seleccionar: (nodeId: string | null) => void
+  readonly renomear: (nome: string) => void
+}
+
+function agora(): number {
+  return Date.now()
+}
+
+export function useCova(): Cova {
+  const gardadoRef = useRef(recuperar())
+
+  const [engine] = useState(() => {
+    const g = gardadoRef.current
+    if (g !== null) {
+      return new TreeEngine(g.tree, { audit: { enabled: true }, initialState: g.state })
+    }
+    return new TreeEngine(menteSemente(), { audit: { enabled: true } })
+  })
+
+  const [politica, setPolitica] = useState<EstadoPolitica>(
+    () => gardadoRef.current?.politica ?? ESTADO_INICIAL,
+  )
+  const [acontecementos, setAcontecementos] = useState<readonly Acontecemento[]>(
+    () => gardadoRef.current?.acontecementos ?? [],
+  )
+  const [nome, setNome] = useState(() => gardadoRef.current?.nome ?? 'Meco')
+  const [seleccionado, setSeleccionado] = useState<string | null>(null)
+  const [di, setDi] = useState<string | null>(null)
+
+  // Espello síncrono da política: permite lela dentro do intervalo do
+  // reloxo sen ter que re-crear o intervalo en cada cambio de estado.
+  const politicaRef = useRef(politica)
+  politicaRef.current = politica
+
+  // Un só carril de mutación: as accións son async (o motor tamén) e
+  // dúas á vez deixarían o estado a medias. `ocupado` é a porta.
+  const [ocupado, setOcupado] = useState(false)
+  const carril = useRef<Promise<void>>(Promise.resolve())
+
+  const subscribe = useCallback((l: () => void) => engine.subscribe(l), [engine])
+  const snapshot = useCallback(() => engine.getBudget(), [engine])
+  const budget = useSyncExternalStore(subscribe, snapshot, snapshot)
+  const drives = budget.resources
+
+  const rexistrar = useCallback((novos: readonly Acontecemento[]) => {
+    if (novos.length === 0) {
+      return
+    }
+    setAcontecementos((vellos) => [...novos, ...vellos].slice(0, MAX_ACONTECEMENTOS))
+  }, [])
+
+  // Ao nacer: acender os nodos que xa existen ao abrir os ollos.
+  const nacido = useRef(false)
+  useEffect(() => {
+    if (nacido.current) {
+      return
+    }
+    nacido.current = true
+    if (gardadoRef.current !== null) {
+      return
+    }
+    void (async () => {
+      for (const id of ['eu', 'verbo', 'memoria:nacemento']) {
+        await engine.unlock(id)
+      }
+      rexistrar([acontecemento('nace-memoria', 'abriu os ollos', agora(), 'memoria:nacemento')])
+    })()
+  }, [engine, rexistrar])
+
+  /** Serializa unha mutación no carril único. */
+  const enfileirar = useCallback((traballo: () => Promise<void>) => {
+    setOcupado(true)
+    carril.current = carril.current
+      .then(traballo)
+      .catch(() => undefined)
+      .finally(() => {
+        setOcupado(false)
+      })
+  }, [])
+
+  /** Tras calquera mutación: a mente reacomódase soa. */
+  const reacomodar = useCallback(async (): Promise<readonly Acontecemento[]> => {
+    const t = agora()
+    const autos = await reconciliarAutonomos(engine, t)
+    const conceptos = await xerarConceptos(engine, t)
+    return [...autos, ...conceptos]
+  }, [engine])
+
+  // ── O reloxo do corpo ──
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      enfileirar(async () => {
+        const t = agora()
+        for (const spec of DRIVE_SPECS) {
+          if (spec.deriva !== 0) {
+            await engine.grantResource(spec.id, spec.deriva)
+          }
+        }
+        // `tick()` do motor: caduca o que teña que caducar. Hoxe non
+        // usamos `timeConstraints`, pero o reloxo do corpo é o sitio
+        // onde vai — non un `setTimeout` solto.
+        engine.tick()
+
+        const feitos: Acontecemento[] = [...(await reacomodar())]
+
+        setPolitica((p) => {
+          const momentos = p.momentos + 1
+          const dia = Math.floor(momentos / MOMENTOS_POR_DIA) + 1
+          if (dia !== p.dia) {
+            feitos.push(acontecemento('dia', `amenceu o día ${dia}`, t))
+          }
+          const estimulo = momentos >= p.estimuloAte ? 'nada' : p.estimulo
+          return { ...p, momentos, dia, estimulo }
+        })
+
+        const olvido = await esquecer(engine, politicaRef.current.frescuras, t)
+        setPolitica((p) => ({ ...p, frescuras: olvido.frescuras }))
+        feitos.push(...olvido.acontecementos)
+
+        rexistrar(feitos)
+      })
+    }, MOMENTO_MS)
+    return () => {
+      window.clearInterval(id)
+    }
+  }, [engine, enfileirar, reacomodar, rexistrar])
+
+  // ── Accións do coidador ──
+  const facer = useCallback(
+    (id: AccionId) => {
+      const accion = ACCIONS.find((a) => a.id === id)
+      if (accion === undefined) {
+        return
+      }
+      enfileirar(async () => {
+        const t = agora()
+        for (const [drive, delta] of Object.entries(accion.deltas)) {
+          await engine.grantResource(drive, delta)
+        }
+
+        const feitos: Acontecemento[] = [acontecemento('accion', accion.di, t)]
+
+        if (id === 'alimentar') {
+          await programarDixestion(engine, t)
+          feitos.push(...(await nacerMemoria(engine, 'primeira-comida', 'primeira comida', 'A primeira vez que alguén lle deu de comer.', t)))
+        }
+        if (id === 'limpar') {
+          await limparCaca(engine)
+          feitos.push(...(await nacerMemoria(engine, 'primeiro-bano', 'primeiro baño', 'Auga morna e mans coñecidas.', t)))
+        }
+        if (id === 'xogar') {
+          feitos.push(...(await nacerMemoria(engine, 'xogo-coidado', 'xogo coidado', 'Alguén tivo tempo para el.', t)))
+        }
+
+        feitos.push(...(await reacomodar()))
+
+        setPolitica((p) => ({
+          ...p,
+          estimulo: accion.estimulo,
+          estimuloAte: p.momentos + DURACION_ESTIMULO,
+        }))
+        rexistrar(feitos)
+      })
+    },
+    [engine, enfileirar, reacomodar, rexistrar],
+  )
+
+  const ensinar = useCallback(
+    (palabra: string) => {
+      enfileirar(async () => {
+        const t = agora()
+        const r = await ensinarPalabra(engine, politicaRef.current, palabra, t)
+        if (r === null) {
+          return
+        }
+        const feitos: Acontecemento[] = [...r.acontecementos]
+
+        if (r.dita) {
+          setDi(palabra)
+          window.setTimeout(() => {
+            setDi(null)
+          }, 4000)
+          if (politicaRef.current.ditas.length === 0) {
+            feitos.push(
+              ...(await nacerMemoria(
+                engine,
+                'primeira-palabra',
+                'primeira palabra ★',
+                `A primeira palabra que dixo foi «${palabra}».`,
+                t,
+              )),
+            )
+          }
+        }
+
+        feitos.push(...(await reacomodar()))
+        setPolitica((p) => ({ ...p, frescuras: r.frescuras, ditas: r.ditas }))
+        setSeleccionado(r.nodeId)
+        rexistrar(feitos)
+      })
+    },
+    [engine, enfileirar, reacomodar, rexistrar],
+  )
+
+  // ── Gardado ──
+  useEffect(() => {
+    gardar({
+      nome,
+      tree: engine.getTreeDef(),
+      state: engine.getSnapshot(),
+      politica,
+      acontecementos,
+    })
+  }, [engine, nome, politica, acontecementos])
+
+  return useMemo(
+    () => ({
+      engine,
+      drives,
+      politica,
+      acontecementos,
+      nome,
+      seleccionado,
+      di,
+      ocupado,
+      facer,
+      ensinar,
+      seleccionar: setSeleccionado,
+      renomear: setNome,
+    }),
+    [engine, drives, politica, acontecementos, nome, seleccionado, di, ocupado, facer, ensinar],
+  )
+}
+// ── FIN: useCova ──

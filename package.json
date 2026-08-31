@@ -1,0 +1,40 @@
+{
+  "name": "a-cova",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Un tamagochi cuxa mente é un grafo Yggdrasil que medra en tempo real diante do coidador.",
+  "author": "Agarfal",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "mente:json": "node scripts/mente-a-json.mjs",
+    "mente:validate": "node scripts/mente-a-json.mjs --out .tmp/mente-semente.json && ygg validate .tmp/mente-semente.json && ygg validate .tmp/bebe-medrado.json",
+    "verificar": "npm run typecheck && npm run test && npm run mente:validate"
+  },
+  "dependencies": {
+    "@yggdrasil-forge/common": "^1.0.0",
+    "@yggdrasil-forge/core": "^1.0.0",
+    "@yggdrasil-forge/react": "^1.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@yggdrasil-forge/cli": "^1.0.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

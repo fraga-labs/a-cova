@@ -1,0 +1,566 @@
+/* ── INICIO: estilos da Cova ──
+   Consola retro: fondo escuro, bordos grosos, monospace. O pixel-art
+   fino do mockup vén despois; isto é a mesma arquitectura visual. */
+
+:root {
+  --fondo: #120d0a;
+  --fondo-panel: #1c1410;
+  --fondo-fondo: #0b0806;
+  --bordo: #4a3728;
+  --bordo-forte: #6b4f38;
+  --texto: #f0e6d2;
+  --texto-suave: #b09a80;
+  --acento: #e08a3c;
+  --alarma: #c1442e;
+  --linguaxe: #a97ae0;
+  --memorias: #5aa9e0;
+  --conceptos: #6fbf73;
+  --afectos: #e07aa8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: 'Cascadia Mono', 'DejaVu Sans Mono', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.visualmente-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cova {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  padding: 10px;
+}
+
+/* ── cabeceira ── */
+
+.cabeceira {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 2px solid var(--bordo);
+  background: var(--fondo-panel);
+}
+
+.marca {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: 2px;
+}
+
+.marca__dia {
+  color: var(--texto-suave);
+  font-weight: normal;
+  letter-spacing: 0;
+}
+
+.nome input,
+.ensinar input {
+  padding: 4px 6px;
+  border: 2px solid var(--bordo);
+  background: var(--fondo-fondo);
+  color: var(--texto);
+  font: inherit;
+}
+
+.nome input {
+  width: 8rem;
+}
+
+.cabeceira__accions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.ligazon {
+  border: 0;
+  background: none;
+  color: var(--texto-suave);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ligazon:hover {
+  color: var(--texto);
+}
+
+.honesto {
+  padding: 10px 14px;
+  border: 2px dashed var(--bordo-forte);
+  background: var(--fondo-panel);
+  color: var(--texto-suave);
+}
+
+.honesto p {
+  margin: 0 0 8px;
+  max-width: 90ch;
+}
+
+.honesto strong {
+  color: var(--texto);
+}
+
+.honesto code {
+  color: var(--linguaxe);
+}
+
+/* ── taboleiro ── */
+
+.taboleiro {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .taboleiro {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 2px solid var(--bordo);
+  background: var(--fondo-panel);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.panel--mente {
+  position: relative;
+  overflow: hidden;
+}
+
+.titulo {
+  margin: 0;
+  color: var(--texto-suave);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+/* ── drives ── */
+
+.drives {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.drive {
+  display: grid;
+  grid-template-columns: 18px 5.5rem 1fr 2.2rem;
+  align-items: center;
+  gap: 6px;
+}
+
+.drive__nome {
+  color: var(--texto-suave);
+}
+
+.drive__barra {
+  height: 10px;
+  border: 1px solid var(--bordo);
+  background: var(--fondo-fondo);
+}
+
+.drive__cheo {
+  display: block;
+  height: 100%;
+  transition: width 400ms linear;
+}
+
+.drive__valor {
+  text-align: right;
+}
+
+.drive--alarma .drive__nome,
+.drive--alarma .drive__valor {
+  color: var(--alarma);
+}
+
+/* ── o bebé ── */
+
+.cova-lenzo {
+  border: 2px solid var(--bordo);
+  background: var(--fondo-fondo);
+}
+
+.cova-lenzo svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.cova-lenzo--triste {
+  border-color: var(--alarma);
+}
+
+.alerta {
+  margin: 0;
+  padding: 6px 8px;
+  border: 2px solid var(--alarma);
+  background: rgb(193 68 46 / 15%);
+  color: #ffb9a8;
+}
+
+.alerta--forte {
+  background: rgb(193 68 46 / 30%);
+}
+
+/* ── accións ── */
+
+.accions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.accion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border: 2px solid var(--bordo-forte);
+  background: var(--fondo-fondo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.accion span:first-child {
+  font-size: 18px;
+}
+
+.accion:hover:not(:disabled) {
+  border-color: var(--acento);
+  background: #241a14;
+}
+
+.accion:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.accion--ensinar {
+  flex-direction: row;
+  justify-content: center;
+}
+
+.accion--ensinar span:first-child {
+  font-size: 13px;
+}
+
+.accion--exportar {
+  flex-direction: row;
+  padding: 6px 10px;
+  border-color: var(--acento);
+}
+
+/* ── ensinanza ── */
+
+.contexto {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+.contexto strong {
+  color: var(--acento);
+}
+
+.ensinar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tier {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr 7rem;
+  align-items: center;
+  gap: 6px;
+  color: var(--texto-suave);
+}
+
+.tier--feito {
+  color: var(--texto);
+}
+
+.tier__barra {
+  height: 8px;
+  border: 1px solid var(--bordo);
+  background: var(--fondo-fondo);
+}
+
+.tier__cheo {
+  display: block;
+  height: 100%;
+  transition: width 300ms ease-out;
+}
+
+.tier__etiqueta {
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+/* ── a mente ── */
+
+.mente__cabeceira {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mente__conta {
+  color: var(--texto-suave);
+  font-size: 11px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.chip {
+  padding: 2px 8px;
+  border: 2px solid;
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.mente__lenzo {
+  flex: 1;
+  min-height: 280px;
+  border: 2px solid var(--bordo);
+  background:
+    radial-gradient(1px 1px at 20% 30%, #6b5f4f 50%, transparent 50%),
+    radial-gradient(1px 1px at 70% 20%, #6b5f4f 50%, transparent 50%),
+    radial-gradient(1px 1px at 40% 70%, #5b5040 50%, transparent 50%),
+    radial-gradient(1px 1px at 85% 60%, #6b5f4f 50%, transparent 50%),
+    radial-gradient(1px 1px at 10% 80%, #5b5040 50%, transparent 50%),
+    var(--fondo-fondo);
+}
+
+.mente__lenzo > * {
+  width: 100%;
+  height: 100%;
+}
+
+.mente__pe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.lenda {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  color: var(--texto-suave);
+  font-size: 10px;
+  list-style: none;
+}
+
+.lenda li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lenda__mostra {
+  width: 10px;
+  height: 10px;
+  border: 2px solid;
+  border-radius: 50%;
+}
+
+.lenda__mostra--descoñecido {
+  border-color: #3a2c22;
+}
+
+.lenda__mostra--descuberto {
+  border-color: var(--texto-suave);
+}
+
+.lenda__mostra--maximo {
+  border-color: var(--acento);
+}
+
+.zoom {
+  display: flex;
+  gap: 4px;
+}
+
+.zoom button {
+  min-width: 2.6rem;
+  padding: 2px 6px;
+  border: 2px solid var(--bordo);
+  background: var(--fondo-fondo);
+  color: var(--texto);
+  font: inherit;
+  cursor: pointer;
+}
+
+.detalle {
+  position: absolute;
+  right: 14px;
+  bottom: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 22rem;
+  padding: 8px 10px;
+  border: 2px solid var(--bordo-forte);
+  background: rgb(18 13 10 / 95%);
+}
+
+.detalle p {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+.detalle__estado {
+  color: var(--acento);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.detalle__pechar {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  color: var(--texto-suave);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ── franxa inferior ── */
+
+.franxa {
+  display: grid;
+  grid-template-columns: 1fr minmax(220px, 320px);
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .franxa {
+    grid-template-columns: 1fr;
+  }
+}
+
+.franxa__col {
+  padding: 8px 10px;
+  border: 2px solid var(--bordo);
+  background: var(--fondo-panel);
+}
+
+.franxa__col--resumo {
+  border-color: var(--linguaxe);
+}
+
+.liña-temporal {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 8.5rem;
+  margin: 6px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.liña-temporal li {
+  display: grid;
+  grid-template-columns: 3.4rem 1.2rem 1fr;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.liña-temporal__hora {
+  color: var(--texto-suave);
+}
+
+.liña-temporal__texto {
+  border: 0;
+  background: none;
+  color: var(--texto);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.liña-temporal__texto:disabled {
+  color: var(--texto-suave);
+  cursor: default;
+}
+
+.liña-temporal__texto:hover:not(:disabled) {
+  color: var(--acento);
+}
+
+.baleiro {
+  color: var(--texto-suave);
+}
+
+.resumo {
+  margin: 6px 0 0;
+  color: var(--conceptos);
+}
+
+/* ── FIN: estilos da Cova ── */
