@@ -968,3 +968,72 @@ body {
 .mente__lenzo[data-filtro='di'] :where(.yf-skill-node[data-node-id^='palabra:'][data-tier='2']) {
   opacity: 0.1;
 }
+
+/* ── lexibilidade dos nodos ── */
+
+/* Halo detrás do texto: sen el, unha etiqueta que cae enriba dunha
+   aresta ou doutro nodo vólvese ilexible. `paint-order: stroke` pinta o
+   contorno ANTES do recheo, así que o trazo queda por detrás da letra. */
+.mente__lenzo :where(.yf-skill-node__label) {
+  paint-order: stroke;
+  stroke: var(--fondo-fondo);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+/* Nivel de detalle. De lonxe só se len as palabras que xa di; a medida
+   que te achegas van aparecendo as demais. As dos SONS e as das rexións
+   pequenas véñense sempre: son poucas e son as que orientan. */
+.mente__lenzo[data-detalle='baixo'] :where(.yf-skill-node[data-node-id^='palabra:'] .yf-skill-node__label),
+.mente__lenzo[data-detalle='baixo'] :where(.yf-skill-node[data-node-id^='son:'] .yf-skill-node__label) {
+  display: none;
+}
+
+.mente__lenzo[data-detalle='medio'] :where(.yf-skill-node[data-node-id^='palabra:'][data-tier='0'] .yf-skill-node__label),
+.mente__lenzo[data-detalle='medio'] :where(.yf-skill-node[data-node-id^='palabra:'][data-tier='1'] .yf-skill-node__label) {
+  display: none;
+}
+
+/* O que estás a mirar sempre se le, pase o que pase co zoom. */
+.mente__lenzo :where(.yf-skill-node[data-selected] .yf-skill-node__label),
+.mente__lenzo :where(.yf-skill-node[data-hover] .yf-skill-node__label) {
+  display: block;
+  stroke-width: 5px;
+}
+
+/* o detalle dunha palabra */
+
+.detalle__palabra {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--bordo);
+}
+
+.detalle__liña {
+  color: var(--texto-suave);
+}
+
+.detalle__liña--falta {
+  color: var(--acento);
+}
+
+.detalle__sons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.son {
+  padding: 0 5px;
+  border: 1px solid var(--bordo);
+  color: var(--texto-suave);
+}
+
+/* O son que xa domina píntase co amarelo da rexión SONS. */
+.son--ten {
+  border-color: #c8a15a;
+  background: #c8a15a;
+  color: #16100d;
+}

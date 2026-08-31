@@ -408,7 +408,10 @@ export async function esquecer(
     const palabra = nodo.id.slice(PREFIXO.palabra.length)
     const producionAntes = engine.getNodeState(nodo.id)?.currentTier ?? 0
 
-    const despois = Math.max(0, antes - esquecementoDe(producionAntes))
+    // Redondeado: o esquecemento graduado ten decimais (0,15 · 0,4 …) e
+    // sen isto saía «ENTENDE 97.3999999» na pantalla. Acumúlase o resto
+    // para que un decaemento de 0,15 non se perda ao redondear.
+    const despois = Math.max(0, Math.round((antes - esquecementoDe(producionAntes)) * 100) / 100)
     seguinte[nodo.id] = despois
     // Ao PERDER, os limiares baixan pola marxe de histérese.
     const producionAgora = rangoDeProducion(despois, palabra, dominados, MARXE_ESQUECEMENTO)
@@ -425,6 +428,18 @@ export async function esquecer(
           nodo.id,
         ),
       )
+    }
+  }
+
+  // Cun vocabulario grande poden caer moitas á vez, e a liña temporal
+  // convértese nunha lista de esquecementos onde xa non se ve nada máis.
+  // A partir de tres, resúmese nunha soa liña.
+  if (feitos.length > 2) {
+    return {
+      familiaridade: seguinte,
+      acontecementos: [
+        acontecemento('esquece', `vanlle esquecendo ${feitos.length} palabras`, agora),
+      ],
     }
   }
 

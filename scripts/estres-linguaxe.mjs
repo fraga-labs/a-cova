@@ -7,7 +7,10 @@
 //   node scripts/estres-linguaxe.mjs [N]
 //
 // Escribe ademais `.tmp/bebe-estres.json` co formato exacto do gardado
-// do navegador, para poder metelo en localStorage e velo cos ollos.
+// do navegador. Para velo cos ollos, coa app aberta, na consola:
+//
+//   localStorage.setItem('a-cova:v2', <o contido do ficheiro>)
+//   location.reload()
 
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -21,8 +24,11 @@ function inventarPalabras(n) {
     'ma', 'pa', 'ca', 'to', 'le', 'so', 'bo', 'te', 'mi', 'lu',
     'ne', 'ro', 'fi', 'ga', 'xa', 'be', 'do', 'pi', 'sa', 'no',
   ]
-  const medios = ['', 'ri', 'la', 'mo', 'te', 'ne', 'co', 'sa', 'lo', 'de']
-  const fins = ['a', 'o', 'e', 'ela', 'iño', 'ada', 'ón', 'al', 'iña', 'ar']
+  // Sílabas de máis, a propósito: un coidador real escribe «cadeira»,
+  // «bicicleta» ou «cabaliño», non «maa». Coas palabras curtas a medida
+  // de solapamento saía 0 e enganaba.
+  const medios = ['ri', 'lade', 'mora', 'teli', 'nesa', 'coba', 'sami', 'lote', 'dena', 'xari']
+  const fins = ['ela', 'iño', 'ada', 'ente', 'illo', 'anza', 'oira', 'umbre', 'iña', 'ario']
   const palabras = new Set()
   let i = 0
   while (palabras.size < n && i < n * 50) {
@@ -112,6 +118,35 @@ try {
     }
   }
 
+  // ── E AGORA O QUE DE VERDADE SE LE: as ETIQUETAS ──
+  // Medir só os círculos era enganarse. O que se pisa e fai ilexible o
+  // grafo é o texto: unha etiqueta de 12 caracteres a 15 px ocupa uns 96
+  // de ancho, moito máis cós 36 do círculo.
+  const ANCHO_POR_LETRA = 9 // monoespazada a 15 px
+  const ALTO_ETIQUETA = 18
+  const DESPRAZAMENTO = 28 // a etiqueta vai por debaixo do nodo
+  const MAX_LETRAS = 12 // `theme.sizes.maxLabelChars`
+  const caixas = posicions.map(([id, p]) => {
+    const nodo = treeDef.nodes.find((n) => n.id === id)
+    const texto = typeof nodo?.label === 'string' ? nodo.label : (nodo?.label?.gl ?? id)
+    const letras = Math.min(texto.length, MAX_LETRAS)
+    const ancho = Math.max(RAIO * 2, letras * ANCHO_POR_LETRA)
+    return { x: p.x, y: p.y + DESPRAZAMENTO, w: ancho, h: ALTO_ETIQUETA }
+  })
+  let etiquetasPisadas = 0
+  for (let i = 0; i < caixas.length; i += 1) {
+    for (let j = i + 1; j < caixas.length; j += 1) {
+      const a = caixas[i]
+      const b = caixas[j]
+      if (
+        Math.abs(a.x - b.x) < (a.w + b.w) / 2 &&
+        Math.abs(a.y - b.y) < (a.h + b.h) / 2
+      ) {
+        etiquetasPisadas += 1
+      }
+    }
+  }
+
   const porTier = {}
   for (const n of treeDef.nodes) {
     if (!n.id.startsWith('palabra:')) continue
@@ -130,12 +165,14 @@ try {
     [
       `palabras ensinadas : ${palabras.length}`,
       `nodos totais       : ${treeDef.nodes.length}`,
+      `longura media      : ${(palabras.reduce((s2, p) => s2 + p.length, 0) / palabras.length).toFixed(1)} letras`,
       `arestas            : ${treeDef.edges.length}`,
       `nodos por rexión   : ${JSON.stringify(porRexion)}`,
       `palabras por rango : ${JSON.stringify(porTier)}`,
       `lenzo              : ${Math.round(b.maxX - b.minX)} × ${Math.round(b.maxY - b.minY)} unidades`,
       `distancia mínima   : ${minima.toFixed(1)} (dous nodos písanse por baixo de ${RAIO * 2})`,
-      `pares que se pisan : ${pisados}`,
+      `círculos que se pisan  : ${pisados}`,
+      `ETIQUETAS que se pisan : ${etiquetasPisadas}`,
       '',
     ].join('\n'),
   )

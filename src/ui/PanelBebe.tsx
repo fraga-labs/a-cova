@@ -35,8 +35,9 @@ export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
   const sombras = sombrasAcesas(cova.engine)
 
   const nodoAmostra = palabraAmostra === null ? null : idPalabra(palabraAmostra)
-  const comprension =
-    palabraAmostra === null ? 0 : comprensionDe(cova.politica.familiaridade, palabraAmostra)
+  const comprension = Math.round(
+    palabraAmostra === null ? 0 : comprensionDe(cova.politica.familiaridade, palabraAmostra),
+  )
   const producion =
     nodoAmostra === null ? 0 : (cova.engine.getNodeState(nodoAmostra)?.currentTier ?? 0)
   const formaActual =

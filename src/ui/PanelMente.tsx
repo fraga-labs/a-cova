@@ -6,7 +6,9 @@ import { resolveLocalized } from '@yggdrasil-forge/common'
 import { SkillTree, type SkillTreeHandle, ThemeProvider } from '@yggdrasil-forge/react'
 import type { JSX } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { COR_REXION, ETIQUETA_REXION, REXIONS, type RexionId } from '../cova/mente-semente.js'
+import { segmentar } from '../cova/fonoloxia.js'
+import { comprensionDe, sonsDominados } from '../cova/linguaxe.js'
+import { COR_REXION, ETIQUETA_REXION, PREFIXO, REXIONS, type RexionId } from '../cova/mente-semente.js'
 import type { Cova } from '../cova/useCova.js'
 import { temaCova } from './tema.js'
 
@@ -17,6 +19,37 @@ import { temaCova } from './tema.js'
  * que che interesa.
  */
 type Filtro = 'todas' | 'intenta' | 'di'
+
+/** Canto texto se amosa, segundo o preto que esteas. */
+type Detalle = 'baixo' | 'medio' | 'alto'
+
+/** Tamaño da fonte das etiquetas, en unidades do layout (ver `tema.ts`). */
+const FONTE = 15
+
+/**
+ * O nivel de detalle NON pode saír do zoom.
+ *
+ * O zoom é relativo ao `viewBox`, e o `viewBox` medra coa mente: con
+ * douscentas palabras mide 4181 unidades para 754 píxeles de panel, así
+ * que ao 100 % de zoom a etiqueta renderízase a **2,7 px** — unha mancha.
+ * O que hai que medir é o tamaño REAL do texto na pantalla.
+ */
+function medirDetalle(contedor: HTMLElement | null, zoom: number): Detalle {
+  const svg = contedor?.querySelector('svg')
+  if (svg === null || svg === undefined) {
+    return 'alto'
+  }
+  const ancho = svg.viewBox.baseVal.width
+  const pixeis = svg.getBoundingClientRect().width
+  if (ancho <= 0 || pixeis <= 0) {
+    return 'alto'
+  }
+  const fontePx = FONTE * (pixeis / ancho) * zoom
+  if (fontePx < 6) {
+    return 'baixo'
+  }
+  return fontePx < 10 ? 'medio' : 'alto'
+}
 
 const ORDE_REXIONS: readonly RexionId[] = [
   REXIONS.corpo,
@@ -30,9 +63,16 @@ const ORDE_REXIONS: readonly RexionId[] = [
 
 export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
   const arbore = useRef<SkillTreeHandle>(null)
+  const lenzo = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(100)
   const [agochadas, setAgochadas] = useState<readonly RexionId[]>([])
   const [filtro, setFiltro] = useState<Filtro>('todas')
+
+  // Nivel de detalle, coma nun mapa. Con douscentas palabras, ler todas
+  // as etiquetas á vez é imposible por moito que non se pisen: a esa
+  // escala son manchas. Así que de lonxe só se ven as que xa di, e o
+  // resto aparece a medida que te achegas.
+  const [detalle, setDetalle] = useState<Detalle>('medio')
 
   // As rexións que EXISTEN no documento, non as que imaxinamos: a SOMBRA
   // só aparece se o bebé chegou a aprender algo da ausencia. Un bebé ben
@@ -103,7 +143,7 @@ export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
 
       <UltimoAceso cova={cova} />
 
-      <div className="mente__lenzo" data-filtro={filtro}>
+      <div className="mente__lenzo" ref={lenzo} data-filtro={filtro} data-detalle={detalle}>
         {/* O ThemeProvider ten que envolver o SkillTree: o wrapper por
             defecto respecta un tema ascendente e só impón `minimal`
             (pensado para fondo claro) se non hai ningún. */}
@@ -120,6 +160,15 @@ export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
             }}
             showTierBadge
             padding={28}
+            // O tope de 4× do renderer queda curto cando a mente é
+            // grande: o `viewBox` medra con ela, así que ao 400 % a
+            // etiqueta aínda estaba a 10,8 px. Con 12× pódese chegar a
+            // ler unha palabra concreta entre douscentas.
+            maxZoom={12}
+            onViewportChange={(v) => {
+              setDetalle(medirDetalle(lenzo.current, v.zoom))
+              setZoom(Math.round(v.zoom * 100))
+            }}
           />
         </ThemeProvider>
       </div>
@@ -150,13 +199,16 @@ export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
           </select>
         </label>
         <div className="zoom">
-          <button type="button" onClick={() => { arbore.current?.zoomOut(); setZoom(Math.round((arbore.current?.getZoom() ?? 1) * 100)) }}>
+          {/* O indicador sae SÓ de `onViewportChange`: actualizalo tamén
+              aquí daba dous valores distintos (o botón dicía 207 % cando
+              o viewport ía por 1200 %). */}
+          <button type="button" title="afastar" onClick={() => arbore.current?.zoomOut()}>
             −
           </button>
-          <button type="button" onClick={() => { arbore.current?.fit(); setZoom(Math.round((arbore.current?.getZoom() ?? 1) * 100)) }}>
+          <button type="button" title="encadrar todo" onClick={() => arbore.current?.fit()}>
             {zoom}%
           </button>
-          <button type="button" onClick={() => { arbore.current?.zoomIn(); setZoom(Math.round((arbore.current?.getZoom() ?? 1) * 100)) }}>
+          <button type="button" title="achegar" onClick={() => arbore.current?.zoomIn()}>
             +
           </button>
         </div>
@@ -226,6 +278,7 @@ function Detalle({ cova }: { readonly cova: Cova }): JSX.Element | null {
         {def.maxTier !== undefined ? ` · ${inst?.currentTier ?? 0}/${def.maxTier}` : ''}
       </span>
       {descricion !== null ? <p>{descricion}</p> : null}
+      <Palabra cova={cova} nodeId={id} />
       <button type="button" className="detalle__pechar" onClick={() => { cova.seleccionar(null) }}>
         pechar
       </button>
@@ -233,4 +286,41 @@ function Detalle({ cova }: { readonly cova: Cova }): JSX.Element | null {
   )
 }
 
+/**
+ * O detalle dunha PALABRA. Isto é o que faltaba para poder aprender a
+ * xogar: ver por que lle sae «aua» e non «auga». Sen dicilo, o coidador
+ * repite a palabra sen saber que o que falta non é comprensión, é o /g/.
+ */
+function Palabra({ cova, nodeId }: { readonly cova: Cova; readonly nodeId: string }): JSX.Element | null {
+  if (!nodeId.startsWith(PREFIXO.palabra)) {
+    return null
+  }
+  const palabra = nodeId.slice(PREFIXO.palabra.length)
+  const comprension = Math.round(comprensionDe(cova.politica.familiaridade, palabra))
+  const dominados = sonsDominados(cova.engine)
+  const sons = [...new Set(segmentar(palabra))]
+  const faltan = sons.filter((x) => !dominados.has(x))
+
+  return (
+    <div className="detalle__palabra">
+      <span className="detalle__liña">
+        entende <strong>{comprension}%</strong>
+      </span>
+      <span className="detalle__sons">
+        {sons.map((x) => (
+          <span key={x} className={`son${dominados.has(x) ? ' son--ten' : ''}`}>
+            {x}
+          </span>
+        ))}
+      </span>
+      {faltan.length > 0 ? (
+        <span className="detalle__liña detalle__liña--falta">
+          Fáltanlle os sons {faltan.map((x) => `/${x}/`).join(' ')} — por iso non lle sae enteira.
+        </span>
+      ) : (
+        <span className="detalle__liña">Xa ten todos os sons desta palabra.</span>
+      )}
+    </div>
+  )
+}
 // ── FIN: o panel da mente ──
