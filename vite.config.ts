@@ -6,5 +6,8 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   base: './',
   plugins: [react()],
-  server: { port: 5180 },
+  // `strictPort`: se o 5190 estivese collido preferimos fallar a que Vite
+  // salte a outro porto en silencio. O 5180 xa e do editor de
+  // yggdrasil-forge (examples/editor) e o solape confunde.
+  server: { port: 5190, strictPort: true },
 })
