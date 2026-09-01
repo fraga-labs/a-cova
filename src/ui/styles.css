@@ -290,6 +290,12 @@ body {
   border-color: var(--acento);
 }
 
+/* É un `<label>` cun `<input type=file>` agochado dentro: sen isto non
+   parece un botón nin se comporta coma un. */
+.accion--importar {
+  border-color: var(--bordo-forte);
+}
+
 /* ── ensinanza ── */
 
 .contexto {
@@ -1073,6 +1079,37 @@ body {
   display: block;
   height: 100%;
   background: var(--memorias);
+}
+
+/* ── a guía das primeiras veces ── */
+
+.guia {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 2px solid var(--acento);
+  background: rgb(224 138 60 / 12%);
+}
+
+.guia__paso {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+.guia__paso strong {
+  color: var(--acento);
+}
+
+.guia__paso em {
+  color: var(--texto);
+  font-style: normal;
+  text-decoration: underline;
+}
+
+.guia__pechar {
+  align-self: flex-start;
+  font-size: 11px;
 }
 
 /* ── o móbil ──

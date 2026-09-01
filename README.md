@@ -78,10 +78,13 @@ Yggdrasil válido, non se publica.
 **Que ve a outra persoa**: a súa propia cova, en branco. O bebé vive no `localStorage` do SEU
 navegador — non hai bebés compartidos nin nada que chegue a ti. Cada quen cría o seu.
 
-**Compartir un bebé concreto** é outra cousa e xa funciona: **EXPORTAR BEBÉ** descarga un `.json`
-que é un documento Yggdrasil válido. Quen o reciba pode abrilo no
-[editor público](https://fraga-labs.github.io/yggdrasil-forge/app/) e ver a mente enteira —
-que palabras aprendeu, que conceptos naceron, e que leccións lle deixou a ausencia.
+**Compartir un bebé concreto** é outra cousa e xa funciona, agora nas dúas direccións:
+**EXPORTAR BEBÉ** descarga un `.json` que é un documento Yggdrasil válido, e **IMPORTAR BEBÉ**
+volve metelo — no teu navegador ou no de outra persoa — coa crianza enteira: os rangos de cada
+palabra, a comprensión, os conceptos, as memorias e as sombras. O mesmo ficheiro abre tamén no
+[editor público](https://fraga-labs.github.io/yggdrasil-forge/app/), onde se ve a mente completa.
+
+Importar **substitúe** o bebé que teñas, así que pregunta antes.
 
 ## Que hai feito (fase A, sen LLM)
 
@@ -115,10 +118,13 @@ que palabras aprendeu, que conceptos naceron, e que leccións lle deixou a ausen
   ficheiros. Cada acción e cada acontecemento teñen a súa voz, e o bebé **balbucea** a palabra que
   di — sempre a mesma melodía para a mesma palabra, así soa coma a súa voz e non coma ruído. Botón
   de silencio na cabeceira, e lémbrase.
-- **EXPORTAR BEBÉ** — descarga un documento Yggdrasil válido que abre no
-  [editor público](https://fraga-labs.github.io/yggdrasil-forge/app/). *Same document, same
-  decisions — agora tamén: same mind.*
-- **Persistencia** — `localStorage` con clave versionada (`a-cova:v1`); o gardado de verdade é
+- **EXPORTAR e IMPORTAR BEBÉ** — descarga un documento Yggdrasil válido que abre no
+  [editor público](https://fraga-labs.github.io/yggdrasil-forge/app/), e que se pode volver meter
+  sen perder nada. *Same document, same decisions — agora tamén: same mind.*
+- **A guía das primeiras veces** — tres liñas, unha á vez, sacadas do estado real: preme unha
+  acción · ensina mentres dura a atención · repite. Vaise soa en canto o bebé intenta a primeira
+  palabra. Sen ela, a regra que fai funcionar todo isto non estaba escrita en ningures.
+- **Persistencia** — `localStorage` con clave versionada (`a-cova:v2`); o gardado de verdade é
   exportar.
 
 Cero cambios de motor: `@yggdrasil-forge/core`, `/react` e `/common` veñen **de npm**, como
@@ -138,9 +144,11 @@ consumidores.
 | `src/cova/drives.ts` | Os 5 drives, os limiares e as constantes do reloxo. |
 | `src/cova/useCova.ts` | O cableado: motor + reloxo + política + React. |
 | `src/cova/exportar.ts` | Exportar bebé como documento Yggdrasil. |
+| `src/cova/importar.ts` | Ler ese mesmo documento e devolver o bebé enteiro. |
 | `src/cova/son.ts` | As voces, sintetizadas. Nin un ficheiro de audio. |
 | `src/ui/Bebe.tsx` | O pixel-art: un corpo base e catro filas que enche cada expresión. |
 | `src/ui/tema.ts` | O tema do grafo. Sen el, o `SkillTree` colle un tema de fondo claro. |
+| `src/ui/Guia.tsx` | A guía das primeiras veces. Unha liña á vez, e desaparece para sempre. |
 | `src/ui/` | Os dous paneis e a franxa inferior. |
 | `docs/ACHADOS.md` | **Achados de cliente zero** contra o motor. Necesidades reais, non especulación. |
 | `TRASPASO.md` | O documento fundacional (concepto v0.1 do dono + north star visual). |
@@ -151,7 +159,7 @@ As catro decisións pendentes do TRASPASO §2 quedaron nos defaults propostos:
 
 1. **Nome**: A Cova. `Meco` como nome do bebé por defecto (editable na cabeceira).
 2. **Voz**: só texto no MVP (bocadillo de cómic). Audio, fase 2.
-3. **Persistencia**: `localStorage` versionado + EXPORTAR BEBÉ como gardado real.
+3. **Persistencia**: `localStorage` versionado + EXPORTAR/IMPORTAR BEBÉ como gardado real.
 4. **Prioridade**: executor propio; GAIA non se para.
 
 Ademais, tres decisións de deseño que non estaban no doc e que se toman aquí:

@@ -17,6 +17,7 @@ import {
 import { sombrasAcesas } from '../cova/sombras.js'
 import { ACCIONS, type Cova } from '../cova/useCova.js'
 import { Bebe, type Expresion } from './Bebe.js'
+import { Guia } from './Guia.js'
 
 /** Os tres chanzos de PRODUCIÓN. A comprensión vai aparte, e vai por diante. */
 const TIERS = [
@@ -66,6 +67,10 @@ export function PanelBebe({ cova }: { readonly cova: Cova }): JSX.Element {
 
   return (
     <section className="panel panel--bebe" aria-label="O bebé">
+      {/* Vai enriba de todo a propósito: é o primeiro que hai que ler, e
+          desaparece para sempre en canto o bucle se entende. */}
+      <Guia cova={cova} />
+
       <h2 className="titulo">ESTADO DO BEBÉ</h2>
       <ul className="drives">
         {DRIVE_SPECS.map((d) => {

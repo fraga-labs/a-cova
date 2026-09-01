@@ -32,11 +32,15 @@ export function documentoBebe(b: CarteiraBebe): TreeDef {
     metadata: {
       ...b.tree.metadata,
       aCova: {
-        formato: 1,
+        // 2: engádese `estado`. Sen el o ficheiro trae a FORMA da mente
+        // pero non a crianza — todo apagado e todas as palabras a cero—,
+        // así que un bebé exportado non se podía volver meter enteiro.
+        formato: 2,
         nome: b.nome,
         dia: b.politica.dia,
         exportadoEn: new Date().toISOString(),
         drives: b.state.budget.resources,
+        estado: b.state,
         politica: b.politica,
         acontecementos: b.acontecementos.slice(-200),
         aviso:

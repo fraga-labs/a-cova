@@ -3,7 +3,8 @@
 import type { JSX } from 'react'
 import { useState } from 'react'
 import { EDITOR_URL, descargarBebe } from '../cova/exportar.js'
-import { esquecerTodo } from '../cova/persistencia.js'
+import { lerBebe } from '../cova/importar.js'
+import { esquecerTodo, gardar } from '../cova/persistencia.js'
 import { estaSilenciado, silenciar, tocar } from '../cova/son.js'
 import { useCova } from '../cova/useCova.js'
 import { Acontecementos } from './Acontecementos.js'
@@ -15,6 +16,25 @@ export function App(): JSX.Element {
   const cova = useCova()
   const [honestoAberto, setHonestoAberto] = useState(false)
   const [mudo, setMudo] = useState(() => estaSilenciado())
+  const [erroImportar, setErroImportar] = useState<string | null>(null)
+
+  // Meter un bebé substitúe o que hai. É a única acción da páxina que
+  // destrúe algo, así que pregunta antes — e pregunta DESPOIS de ler o
+  // ficheiro, para non facer perder nada por un ficheiro que nin vale.
+  async function importar(ficheiro: File): Promise<void> {
+    const r = lerBebe(await ficheiro.text())
+    if (!r.ok) {
+      setErroImportar(r.erro)
+      return
+    }
+    setErroImportar(null)
+    const aviso = `Isto substitúe a ${cova.nome} polo bebé «${r.bebe.nome}» (día ${r.bebe.politica.dia}). Non hai volta atrás. Seguro?`
+    if (!window.confirm(aviso)) {
+      return
+    }
+    gardar(r.bebe)
+    window.location.reload()
+  }
 
   useSons(cova)
 
@@ -70,6 +90,23 @@ export function App(): JSX.Element {
           >
             EXPORTAR BEBÉ
           </button>
+          <label className="accion accion--exportar accion--importar">
+            IMPORTAR BEBÉ
+            <input
+              type="file"
+              accept="application/json,.json"
+              className="visualmente-oculto"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                // Limpar o valor: se non, escoller o MESMO ficheiro dúas
+                // veces seguidas non dispara `change` e parece roto.
+                e.target.value = ''
+                if (f !== undefined) {
+                  void importar(f)
+                }
+              }}
+            />
+          </label>
           <a className="ligazon" href={EDITOR_URL} target="_blank" rel="noreferrer">
             abrir no editor ↗
           </a>
@@ -85,6 +122,12 @@ export function App(): JSX.Element {
           </button>
         </div>
       </header>
+
+      {erroImportar !== null ? (
+        <p className="alerta alerta--forte" role="alert">
+          Non se puido importar: {erroImportar}
+        </p>
+      ) : null}
 
       {honestoAberto ? (
         <aside className="honesto">
