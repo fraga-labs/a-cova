@@ -26,29 +26,99 @@ type Detalle = 'baixo' | 'medio' | 'alto'
 /** Tamaño da fonte das etiquetas, en unidades do layout (ver `tema.ts`). */
 const FONTE = 15
 
+/** Por baixo disto (píxeles de pantalla) a etiqueta é unha mancha. */
+const LEXIBLE = 6
+
 /**
- * O nivel de detalle NON pode saír do zoom.
+ * A onde se apunta ao achegarse. Un píxel por riba do limiar e non
+ * xusto nel: medido no teléfono, pedir os 6 exactos deixaba o texto en
+ * 5,96 —o renderer cuantiza o zoom— e seguía sen amosarse.
+ */
+const OBXECTIVO = LEXIBLE + 1
+
+/**
+ * Canto se pode achegar o encadre inicial antes de deixar de ver a mente
+ * enteira. Isto é o que distingue «o panel é estreito de máis» de «a
+ * mente é grande de máis»: no primeiro caso chega un empuxón, no segundo
+ * non hai zoom que chegue e é mellor ver o conxunto.
+ */
+const ACHEGA_MAXIMA = 2
+
+/**
+ * Píxeles de pantalla por unidade de layout, ao zoom 1.
  *
  * O zoom é relativo ao `viewBox`, e o `viewBox` medra coa mente: con
- * douscentas palabras mide 4181 unidades para 754 píxeles de panel, así
- * que ao 100 % de zoom a etiqueta renderízase a **2,7 px** — unha mancha.
- * O que hai que medir é o tamaño REAL do texto na pantalla.
+ * douscentas palabras mide 4181 unidades para 754 píxeles de panel. De
+ * aí que o zoom por si só non diga nada sobre se algo se le.
  */
-function medirDetalle(contedor: HTMLElement | null, zoom: number): Detalle {
+function escalaDoLenzo(contedor: HTMLElement | null): number | null {
   const svg = contedor?.querySelector('svg')
   if (svg === null || svg === undefined) {
-    return 'alto'
+    return null
   }
   const ancho = svg.viewBox.baseVal.width
   const pixeis = svg.getBoundingClientRect().width
   if (ancho <= 0 || pixeis <= 0) {
+    return null
+  }
+  return pixeis / ancho
+}
+
+/**
+ * O nivel de detalle NON pode saír do zoom: ao 100 % unha mente de
+ * douscentas palabras renderiza a etiqueta a **2,7 px**. O que hai que
+ * medir é o tamaño REAL do texto na pantalla.
+ */
+function medirDetalle(contedor: HTMLElement | null, zoom: number): Detalle {
+  const escala = escalaDoLenzo(contedor)
+  if (escala === null) {
     return 'alto'
   }
-  const fontePx = FONTE * (pixeis / ancho) * zoom
-  if (fontePx < 6) {
+  const fontePx = FONTE * escala * zoom
+  if (fontePx < LEXIBLE) {
     return 'baixo'
   }
   return fontePx < 10 ? 'medio' : 'alto'
+}
+
+/**
+ * A decisión soa, sen DOM: dada a escala do lenzo e o zoom ao que quedou
+ * o encadre, a que zoom hai que ir — ou `null` se non hai que moverse.
+ */
+export function zoomLexible(escala: number, actual: number): number | null {
+  const preciso = OBXECTIVO / (FONTE * escala)
+  if (preciso <= actual || preciso > actual * ACHEGA_MAXIMA) {
+    return null
+  }
+  return preciso
+}
+
+/**
+ * Encadrar todo é o correcto nun panel ancho e é un erro nun estreito.
+ * Medido nun teléfono de 375 px: o lenzo queda en 331 e unha mente de
+ * vinte nodos —que no escritorio se le de sobra— sae a **5 px** de
+ * fonte, é dicir, unha constelación de puntos sen unha soa palabra.
+ *
+ * Así que encadramos, calculamos o zoom exacto ao que a etiqueta chega
+ * ao mínimo lexible e, se é pouco máis do que xa hai, achegámonos ata
+ * alí centrados no «eu». Se fai falta moito máis, non se toca: iso xa
+ * non é un panel estreito, é unha mente grande, e a vista do conxunto
+ * vale máis ca unha lupa.
+ */
+function encadrarLexible(arbore: SkillTreeHandle | null, contedor: HTMLElement | null): void {
+  if (arbore === null) {
+    return
+  }
+  arbore.fit()
+  const escala = escalaDoLenzo(contedor)
+  if (escala === null) {
+    return
+  }
+  const desexado = zoomLexible(escala, arbore.getZoom())
+  if (desexado === null) {
+    return
+  }
+  arbore.centerOn('eu', { zoom: desexado })
 }
 
 const ORDE_REXIONS: readonly RexionId[] = [
@@ -102,8 +172,10 @@ export function PanelMente({ cova }: { readonly cova: Cova }): JSX.Element {
   // por que perseguilo.
   useEffect(() => {
     const id = requestAnimationFrame(() => {
-      arbore.current?.fit()
-      setZoom(Math.round((arbore.current?.getZoom() ?? 1) * 100))
+      encadrarLexible(arbore.current, lenzo.current)
+      const z = arbore.current?.getZoom() ?? 1
+      setZoom(Math.round(z * 100))
+      setDetalle(medirDetalle(lenzo.current, z))
     })
     return () => {
       cancelAnimationFrame(id)

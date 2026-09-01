@@ -141,12 +141,6 @@ body {
   min-height: 0;
 }
 
-@media (max-width: 900px) {
-  .taboleiro {
-    grid-template-columns: 1fr;
-  }
-}
-
 .panel {
   display: flex;
   flex-direction: column;
@@ -500,12 +494,6 @@ body {
   display: grid;
   grid-template-columns: 1fr minmax(220px, 320px);
   gap: 10px;
-}
-
-@media (max-width: 900px) {
-  .franxa {
-    grid-template-columns: 1fr;
-  }
 }
 
 .franxa__col {
@@ -1085,4 +1073,98 @@ body {
   display: block;
   height: 100%;
   background: var(--memorias);
+}
+
+/* ── o móbil ──
+   Nun escritorio A Cova é unha consola: alto fixo e cada panel co seu
+   propio scroll. Nun teléfono iso non se degrada, rompe. Medido a 375 ×
+   812: o panel do bebé ten 793 px de contido nun oco de 238, así que os
+   botóns de acción quedaban debuxados no 537 — fóra do seu panel, fóra
+   de pantalla e, o que importa, fóra de alcance: `elementFromPoint`
+   devolvía o SVG da mente, non o botón. Non se podía xogar.
+
+   Por baixo dos 900 a consola deixa de ser consola: unha soa columna que
+   scrollea enteira, na orde na que se xoga (bebé → accións → mente). */
+
+@media (max-width: 900px) {
+  .cova {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .taboleiro,
+  .franxa {
+    grid-template-columns: 1fr;
+  }
+
+  .taboleiro {
+    flex: none;
+  }
+
+  /* O scroll é o da páxina. Ningún panel volve recortar por dentro. */
+  .panel {
+    overflow: visible;
+  }
+
+  /* Agás a mente, que o que recorta é o lenzo, non o contido. */
+  .panel--mente {
+    overflow: hidden;
+  }
+
+  /* O lenzo xa non pode «encher o que sobre», porque non sobra nada. */
+  .mente__lenzo {
+    flex: none;
+    height: 58vh;
+  }
+
+  /* Con `max-width: 22rem` cabía por tres píxeles nun ancho de 375.
+     Mellor ancorala ás dúas bandas e que se axuste ela. */
+  .detalle {
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+
+  /* No escritorio a cara ocupa os 380 px da columna e queda ben. A
+     pantalla completa dun teléfono é outra cousa: medía 219 px de alto e
+     empurraba os botóns un scroll enteiro cara abaixo. */
+  .cova-lenzo {
+    max-width: 190px;
+    margin-inline: auto;
+  }
+
+  .cabeceira__accions {
+    margin-left: 0;
+  }
+}
+
+/* ── o dedo ──
+   Isto non vai do tamaño da pantalla senón do que apunta. Un chip de 10
+   px de alto acértase co rato e non co dedo, e o teléfono non é o único
+   sitio onde se toca. */
+
+@media (pointer: coarse) {
+  .chip {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .ficha {
+    padding: 8px 12px 11px;
+    font-size: 12px;
+  }
+
+  .zoom button {
+    padding: 8px 10px;
+  }
+
+  .filtro select {
+    padding: 7px 6px;
+    font-size: 12px;
+  }
+
+  .detalle__pechar,
+  .liña-temporal__texto {
+    padding: 6px 0;
+  }
 }
