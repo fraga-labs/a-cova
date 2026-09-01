@@ -111,6 +111,11 @@ Importar **substitúe** o bebé que teñas, así que pregunta antes.
   *dormir cun ollo aberto*, *comer coma se non fose haber máis*, *deixar de chamar*. Non son
   castigos: cada unha dá algo e quita algo. Coidalo apágaas, pero **o nodo queda na mente para
   sempre** e viaxa no documento exportado.
+- **O tempo pasa cando pechas** — ao volver, o mundo seguiu: as necesidades correron soas, a
+  soidade acumulouse e o que estaba a medio aprender esvaeceuse. Sen isto, marchar non contaba e
+  as sombras só se alcanzaban deixando o xogo aberto mirando como o desatendías — que é xusto o
+  contrario do que din. Ten un tope de tres días da cova: volver dun mes non borra un vocabulario
+  enteiro, porque un castigo que arrasa deixa de ensinar nada.
 - **A cara** — bebé + accións á esquerda, **a mente en vivo** (SkillTree) á dereita, acontecementos
   con horas reais abaixo. O bebé ten oito expresións (tranquilo · contento · triste · famento ·
   durmido · falando · apagado · pestanexo), respira, pestanexa e chora bágoas de verdade.
@@ -142,6 +147,7 @@ consumidores.
 | `src/cova/lexico.ts` | A táboa de estímulos e campos semánticos. Está á vista a propósito. |
 | `src/cova/sombras.ts` | As leccións da ausencia e o que lle cambian ao mundo. |
 | `src/cova/drives.ts` | Os 5 drives, os limiares e as constantes do reloxo. |
+| `src/cova/ausencia.ts` | O que pasou mentres non estabas, e o seu tope. |
 | `src/cova/useCova.ts` | O cableado: motor + reloxo + política + React. |
 | `src/cova/exportar.ts` | Exportar bebé como documento Yggdrasil. |
 | `src/cova/importar.ts` | Ler ese mesmo documento e devolver o bebé enteiro. |

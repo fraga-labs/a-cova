@@ -24,6 +24,8 @@ const VOCES: Record<TipoAcontecemento, Voz | null> = {
   esquece: 'esquece',
   auto: null, // depende do nodo; resólvese abaixo
   sombra: 'sombra',
+  // Volver e atopar o que deixaches non é unha boa nova.
+  ausencia: 'chorar',
 }
 
 /** Os autónomos que si teñen voz propia. */

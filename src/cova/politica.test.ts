@@ -10,6 +10,7 @@ import { menteSemente } from './mente-semente.js'
 import {
   limparCaca,
   programarDixestion,
+  reclamparRecursos,
   reconciliarAutonomos,
   xerarConceptos,
 } from './politica.js'
@@ -154,6 +155,31 @@ describe('a dixestion - o que entra, sae', () => {
     vi.setSystemTime(T0 + 10_000_000)
     await reconciliarAutonomos(e, Date.now())
     expect(estadoDe(e, 'caca')).toBe('locked')
+  })
+})
+
+describe('o tope dos recursos', () => {
+  it('un efecto de nodo pasa do `max`, e reclampar arránxao', async () => {
+    // O motor ten dúas portas de escritura e só unha respecta o tope:
+    // `grantResource` clampea e os `effects` do nodo non (achado 9).
+    // Reproducido: a sucidade queda en 145 sobre un max de 100.
+    const e = motor()
+    await e.grantResource('sucidade', 200)
+    expect(e.getBudget().resources.sucidade).toBe(100)
+
+    await programarDixestion(e, Date.now() - DIXESTION_MS - 1000)
+    await reconciliarAutonomos(e, Date.now())
+    expect(e.getBudget().resources.sucidade).toBe(145)
+
+    await reclamparRecursos(e)
+    expect(e.getBudget().resources.sucidade).toBe(100)
+  })
+
+  it('e non toca o que está dentro do tope', async () => {
+    const e = motor()
+    const antes = { ...e.getBudget().resources }
+    await reclamparRecursos(e)
+    expect(e.getBudget().resources).toEqual(antes)
   })
 })
 

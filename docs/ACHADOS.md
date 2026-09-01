@@ -201,6 +201,41 @@ dentro do módulo, só que privadas.
 
 ---
 
+## Achado 9 — os `effects` dun nodo non respectan o `max` do recurso
+
+Hai dúas portas para escribir nun recurso e **só unha respecta o tope declarado**:
+`grantResource` clampea a `[0, resource.max]`, e os `effects` de tipo `modify_resource` que
+un nodo dispara ao acenderse non.
+
+Reproducido, e é un caso normal de xogo:
+
+```
+sucidade (max 100) tras grantResource(+200) : 100   ← clampa
+acende `caca`, cuxo efecto é `sucidade +45` : 145   ← non clampa
+seguinte grantResource(+1)                  : 100   ← volve de golpe
+```
+
+O que ve quen xoga é unha barra ao 145 % que despois salta a 100 soa e sen motivo. O que ve
+quen programa é peor: **o `max` do documento non é un invariante**, é só un clamp que aplica unha
+das dúas portas. Se un consumidor declara un tope e escribe as súas regras contando con el, o
+tope non se cumpre — e non hai aviso.
+
+Detectouse ao facer que o tempo pasase durante a ausencia: volver despois de horas deixa a
+sucidade no seu máximo e a caca disparándose xusto despois, que é exactamente a secuencia que
+o destapa.
+
+**Como o rodeamos**: `reclamparRecursos` en `politica.ts`, chamado despois de reconciliar os
+autónomos. Réstalle a cada recurso o que lle sobre; non usa `grantResource(id, 0)` a propósito,
+que sería volver confiar no clamp.
+
+**Custo**: baixo, pero silencioso, que é o que o fai desagradable.
+
+**Petición razoable**: aplicar o mesmo clamp na avaliación dos `effects`. Se hai unha razón para
+non facelo (que un efecto poida pasar do tope a propósito), entón `max` debería documentarse como
+«tope de `grantResource`» e non como tope do recurso.
+
+---
+
 ## Nota — o que SI deu o motor sen pedirlle nada
 
 Convén deixar constancia tamén do contrario, porque un documento que só recolle queixas mente.

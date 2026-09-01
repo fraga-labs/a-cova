@@ -16,6 +16,7 @@ import type { EstimuloId } from './lexico.js'
 import { menteSemente } from './mente-semente.js'
 import { gardar, recuperar } from './persistencia.js'
 import { type Acontecemento, acontecemento } from './acontecementos.js'
+import { poñerAoDia } from './ausencia.js'
 import { recolocar } from './colocacion.js'
 import { DECAEMENTO_ATENCION, ensinarPalabra, esquecer } from './linguaxe.js'
 import {
@@ -25,6 +26,7 @@ import {
   medirSoidade,
   nacerMemoria,
   programarDixestion,
+  reclamparRecursos,
   reconciliarAutonomos,
   xerarConceptos,
 } from './politica.js'
@@ -177,24 +179,6 @@ export function useCova(): Cova {
     )
   }, [])
 
-  // Ao nacer: acender os nodos que xa existen ao abrir os ollos.
-  const nacido = useRef(false)
-  useEffect(() => {
-    if (nacido.current) {
-      return
-    }
-    nacido.current = true
-    if (gardadoRef.current !== null) {
-      return
-    }
-    void (async () => {
-      for (const id of ['eu', 'verbo', 'memoria:nacemento']) {
-        await engine.unlock(id)
-      }
-      rexistrar([acontecemento('nace-memoria', 'abriu os ollos', agora(), 'memoria:nacemento')])
-    })()
-  }, [engine, rexistrar])
-
   /** Serializa unha mutación no carril único. */
   const enfileirar = useCallback((traballo: () => Promise<void>) => {
     setOcupado(true)
@@ -216,11 +200,58 @@ export function useCova(): Cova {
   const reacomodar = useCallback(async (): Promise<readonly Acontecemento[]> => {
     const t = agora()
     const autos = await reconciliarAutonomos(engine, t)
+    // Os autónomos disparan `effects`, e eses non respectan o `max`.
+    await reclamparRecursos(engine)
     const conceptos = await xerarConceptos(engine, politicaRef.current.referentes, t)
     // Ao final: o que naceu aínda non ten sitio no debuxo.
     await recolocar(engine)
     return [...autos, ...conceptos]
   }, [engine])
+
+  // ── O arranque ──
+  // Dous casos, e ata agora só había un.
+  const nacido = useRef(false)
+  useEffect(() => {
+    if (nacido.current) {
+      return
+    }
+    nacido.current = true
+
+    const g = gardadoRef.current
+    if (g === null) {
+      // Nace: acender os nodos que xa existen ao abrir os ollos.
+      void (async () => {
+        for (const id of ['eu', 'verbo', 'memoria:nacemento']) {
+          await engine.unlock(id)
+        }
+        rexistrar([acontecemento('nace-memoria', 'abriu os ollos', agora(), 'memoria:nacemento')])
+      })()
+      return
+    }
+
+    // Volve alguén que xa tiña un bebé. O mundo seguiu sen el, e iso
+    // ata agora non pasaba: sen isto, pechar a pestana conxelaba a cova.
+    enfileirar(async () => {
+      const r = await poñerAoDia(
+        engine,
+        politicaRef.current,
+        modsRef.current,
+        g.gardadoEn,
+        agora(),
+      )
+      if (r === null) {
+        return
+      }
+      mudarPolitica(() => r.politica)
+      // As sombras nacen aquí igual ca no reloxo; acendelas é da regra 1.
+      await xerarSombras(engine, engine.getBudget().resources.soidade ?? 0)
+      // O resumo vai o ÚLTIMO do lote a propósito: `rexistrar` inverte
+      // antes de encabezar, así que o último acaba arriba. É a liña que
+      // hai que ler primeiro ao volver, non a que queda soterrada baixo
+      // catro sombras e unha caca.
+      rexistrar([...(await reacomodar()), ...r.acontecementos])
+    })
+  }, [engine, enfileirar, mudarPolitica, reacomodar, rexistrar])
 
   // ── O reloxo do corpo ──
   useEffect(() => {

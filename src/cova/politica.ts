@@ -363,6 +363,33 @@ export async function programarDixestion(engine: TreeEngine, agora: number): Pro
   ])
 }
 
+/**
+ * Volve meter os recursos dentro do seu `max`.
+ *
+ * Fai falta porque hai DÚAS portas de escritura e só unha respecta o
+ * tope: `grantResource` clampea, e os `effects` declarativos dun nodo
+ * non (ver `docs/ACHADOS.md`, achado 9). Cando a caca acende, o seu
+ * efecto mete +45 nunha sucidade que xa ía por 100 e déixaa en 145 —
+ * unha barra ao 145 %, ata que o seguinte `grantResource` a devolve a
+ * 100 de golpe e sen explicación.
+ *
+ * Non se usa `grantResource(id, 0)` a propósito: iso sería confiar outra
+ * vez no clamp. Réstase o exceso, que non depende de nada.
+ */
+export async function reclamparRecursos(engine: TreeEngine): Promise<void> {
+  const recursos = engine.getTreeDef().resources ?? []
+  const actuais = engine.getBudget().resources
+  for (const r of recursos) {
+    if (r.max === undefined) {
+      continue
+    }
+    const exceso = (actuais[r.id] ?? 0) - r.max
+    if (exceso > 0) {
+      await engine.grantResource(r.id, -exceso)
+    }
+  }
+}
+
 /** Cancela a dixestión pendente e apaga a caca. Chámaa `limpar`. */
 export async function limparCaca(engine: TreeEngine): Promise<void> {
   const estado = engine.getNodeState('caca')?.state
