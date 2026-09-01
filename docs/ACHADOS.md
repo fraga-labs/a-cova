@@ -4,7 +4,7 @@ A Cova é o **cliente zero do crecemento en runtime** de Yggdrasil Forge. O que 
 sae de aquí como necesidade REAL documentada, non como especulación. Cada achado leva: que
 esperabamos, que atopamos, como o rodeamos hoxe, e canto custa.
 
-Estado a 2026-08-31, contra `@yggdrasil-forge/core@1.0.0` (instalado desde npm).
+Estado a 2026-09-01, contra `@yggdrasil-forge/core@1.0.0` (instalado desde npm).
 
 Ningún destes achados bloqueou o MVP. Ningún deles require tocar o motor hoxe.
 
@@ -168,6 +168,36 @@ no código — e houbo que tirala.
 
 **Petición razoable**: que `ProgressManager` lea `this.context.store.getTreeDef()` no momento de
 usalo, igual que fan os demais. Unha liña, retrocompatible, e devolve un contrato enteiro.
+
+---
+
+## Achado 8 — quen coloca os nodos non sabe canto miden
+
+`@yggdrasil-forge/react` decide o tamaño de cada nodo con dúas táboas internas
+(`DEFAULT_RADIUS_BY_TYPE` e `DEFAULT_SHAPE_BY_TYPE`, en `SkillNode`) e **non exporta ningunha**,
+nin unha función `nodeRadius(node)`. Un consumidor que calcula as posicións el mesmo —que é o
+noso caso, e o que o layout `custom` convida a facer— non ten como preguntar canto ocupa o que
+vai colocar.
+
+Non é teórico. Colocabamos os nodos a 58 unidades cun comentario que dicía «un nodo mide uns 36»,
+un número a ollo. Os números reais van de 16 (`small`) a 40 (`root`), e `milestone` debúxase como
+un **cadrado de lado 2r**, así que pola esquina chega a `r·√2 = 34`. Resultado: `verbo` e `mais`
+pisábanse **na mente semente**, é dicir, no primeiro segundo de cada partida, desde o primeiro día.
+E as dúas primeiras memorias pisábanse en canto nacían.
+
+Peor: como o script de estrés medía co mesmo 18 inventado, **dicía que non se pisaba nada**. Unha
+medida coa mesma suposición errada có código que mide non é unha medida.
+
+**Como o rodeamos**: `src/cova/colocacion.ts` copia as dúas táboas do renderer. Funciona e está
+probado (`colocacion.test.ts`), pero é copiar unha constante privada doutro paquete: o día que o
+renderer cambie un radio, a colocación segue crendo o vello e ninguén se entera.
+
+**Custo**: medio. O fallo era permanente e visible, e o arranxo é un acoplamento que non se pode
+verificar desde aquí.
+
+**Petición razoable**: exportar `nodeRadius(node: NodeDef): number` e `nodeShape(node: NodeDef)`.
+Non fai falta unha API nova — son as dúas funcións `resolveRadius`/`resolveShape` que xa existen
+dentro do módulo, só que privadas.
 
 ---
 

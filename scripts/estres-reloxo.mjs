@@ -36,6 +36,7 @@ try {
   }
 
   let familiaridade = {}
+  let referentes = {}
   let ditas = []
   for (let k = 0; k < CANTAS; k += 1) {
     const palabra = `pal${k}a`
@@ -44,12 +45,14 @@ try {
         engine,
         { referente: 'auga', forza: 100 },
         familiaridade,
+        referentes,
         ditas,
         palabra,
         i,
       )
       if (r === null) break
       familiaridade = r.familiaridade
+      referentes = r.referentes
       ditas = r.ditas
       if (r.producion >= 3) break
     }
@@ -66,7 +69,7 @@ try {
     engine.tick()
     await xerarSombras(engine, engine.getBudget().resources.soidade ?? 0)
     await reconciliarAutonomos(engine, t)
-    await xerarConceptos(engine, t)
+    await xerarConceptos(engine, referentes, t)
     await recolocar(engine)
     const r = await esquecer(engine, familiaridade, t)
     familiaridade = r.familiaridade

@@ -61,12 +61,12 @@ try {
 
   const palabras = inventarPalabras(CANTAS)
   let familiaridade = {}
+  let referentes = {}
   let ditas = []
 
   // Cada palabra recibe un número distinto de exposicións: unha partida
   // de verdade non ten douscentas palabras todas no mesmo punto, ten
   // unhas cantas que xa di e unha morea que aínda non.
-  palabras.forEach((palabra, orde) => undefined)
   for (const [orde, palabra] of palabras.entries()) {
     const veces = 2 + (orde % 15)
     for (let i = 0; i < veces; i += 1) {
@@ -74,12 +74,14 @@ try {
         engine,
         { referente: 'auga', forza: 100 },
         familiaridade,
+        referentes,
         ditas,
         palabra,
         i,
       )
       if (r === null) break
       familiaridade = r.familiaridade
+      referentes = r.referentes
       ditas = r.ditas
       if (r.producion >= 3) break
     }
@@ -104,17 +106,29 @@ try {
   }
 
   const posicions = [...layout.value.nodes.entries()]
-  // Raio aproximado dun nodo `small` no tema actual, en unidades de layout.
-  const RAIO = 18
+
+  // O radio REAL de cada nodo, o mesmo que usa a colocación e o mesmo
+  // que debuxa o renderer. Antes aquí había un `const RAIO = 18` a ollo,
+  // e por iso este script dicía «0 pisados» mentres o navegador ensinaba
+  // memorias solapadas: `caca` mide 34 e un cadrado de 24 chega a 34
+  // pola esquina.
+  const { raioVisual } = await servidor.ssrLoadModule('/src/cova/colocacion.ts')
+  const raioDe = new Map(treeDef.nodes.map((n) => [n.id, raioVisual(n)]))
+
   let pisados = 0
   let minima = Number.POSITIVE_INFINITY
+  const exemplos = []
   for (let i = 0; i < posicions.length; i += 1) {
     for (let j = i + 1; j < posicions.length; j += 1) {
-      const [, a] = posicions[i]
-      const [, b] = posicions[j]
-      const d = Math.hypot(a.x - b.x, a.y - b.y)
-      if (d < minima) minima = d
-      if (d < RAIO * 2) pisados += 1
+      const [idA, a] = posicions[i]
+      const [idB, b] = posicions[j]
+      const lim = (raioDe.get(idA) ?? 24) + (raioDe.get(idB) ?? 24)
+      const folgura = Math.hypot(a.x - b.x, a.y - b.y) - lim
+      if (folgura < minima) minima = folgura
+      if (folgura < 0) {
+        pisados += 1
+        if (exemplos.length < 5) exemplos.push(`${idA} ↔ ${idB} (${folgura.toFixed(0)})`)
+      }
     }
   }
 
@@ -122,15 +136,17 @@ try {
   // Medir só os círculos era enganarse. O que se pisa e fai ilexible o
   // grafo é o texto: unha etiqueta de 12 caracteres a 15 px ocupa uns 96
   // de ancho, moito máis cós 36 do círculo.
-  const ANCHO_POR_LETRA = 9 // monoespazada a 15 px
-  const ALTO_ETIQUETA = 18
-  const DESPRAZAMENTO = 28 // a etiqueta vai por debaixo do nodo
+  // Medido no navegador: unha etiqueta real mide 12,5 unidades de alto,
+  // uns 8,2 por letra, e o renderer pona en `y = 32`.
+  const ANCHO_POR_LETRA = 8.2
+  const ALTO_ETIQUETA = 13
+  const DESPRAZAMENTO = 32
   const MAX_LETRAS = 12 // `theme.sizes.maxLabelChars`
   const caixas = posicions.map(([id, p]) => {
     const nodo = treeDef.nodes.find((n) => n.id === id)
     const texto = typeof nodo?.label === 'string' ? nodo.label : (nodo?.label?.gl ?? id)
     const letras = Math.min(texto.length, MAX_LETRAS)
-    const ancho = Math.max(RAIO * 2, letras * ANCHO_POR_LETRA)
+    const ancho = Math.max((raioDe.get(id) ?? 24) * 2, letras * ANCHO_POR_LETRA)
     return { x: p.x, y: p.y + DESPRAZAMENTO, w: ancho, h: ALTO_ETIQUETA }
   })
   let etiquetasPisadas = 0
@@ -170,8 +186,8 @@ try {
       `nodos por rexión   : ${JSON.stringify(porRexion)}`,
       `palabras por rango : ${JSON.stringify(porTier)}`,
       `lenzo              : ${Math.round(b.maxX - b.minX)} × ${Math.round(b.maxY - b.minY)} unidades`,
-      `distancia mínima   : ${minima.toFixed(1)} (dous nodos písanse por baixo de ${RAIO * 2})`,
-      `círculos que se pisan  : ${pisados}`,
+      `folgura mínima     : ${minima.toFixed(1)} (por baixo de 0 dous nodos tócanse)`,
+      `NODOS que se pisan     : ${pisados}${exemplos.length > 0 ? ` — ${exemplos.join(', ')}` : ''}`,
       `ETIQUETAS que se pisan : ${etiquetasPisadas}`,
       '',
     ].join('\n'),
@@ -187,7 +203,15 @@ try {
       nome: 'Estrés',
       tree: treeDef,
       state: engine.getSnapshot(),
-      politica: { momentos: 400, dia: 7, atencion: { referente: null, forza: 0 }, familiaridade, ditas },
+      politica: {
+        momentos: 400,
+        dia: 7,
+        atencion: { referente: null, forza: 0 },
+        familiaridade,
+        referentes,
+        recentes: [],
+        ditas,
+      },
       acontecementos: [],
     }),
     'utf8',

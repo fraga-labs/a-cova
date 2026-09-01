@@ -28,8 +28,65 @@ import { PREFIXO, REXIONS, type RexionId } from './rexions.js'
 /** Ángulo áureo. O que fai que a espiral non deixe ocos nin se solape. */
 const ANGULO_AUREO = Math.PI * (3 - Math.sqrt(5))
 
-/** Separación entre veciños dentro dunha morea. Un nodo mide uns 36. */
-const ESPALLAMENTO = 58
+/**
+ * Canto ocupa cada tipo de nodo, en unidades de layout.
+ *
+ * Isto NON está inventado: é a táboa que usa o renderer
+ * (`DEFAULT_RADIUS_BY_TYPE` / `DEFAULT_SHAPE_BY_TYPE` en
+ * `@yggdrasil-forge/react`), que non a exporta. Copiala é un acoplamento
+ * feo e está anotado en `docs/ACHADOS.md`: quen coloca os nodos non ten
+ * como preguntarlle ao que os debuxa canto miden. Pero a alternativa era
+ * o que había —supoñer «un nodo mide uns 36»— e era falso: `caca` mide
+ * 68 e `sombra` 63, así que se pisaban.
+ */
+const RAIO_POR_TIPO: Readonly<Record<string, number>> = {
+  root: 40,
+  small: 16,
+  notable: 26,
+  keystone: 34,
+  mastery: 30,
+  ascendancy: 32,
+  cluster: 22,
+  gateway: 26,
+  milestone: 24,
+  subtree_anchor: 28,
+  custom: 24,
+}
+
+/** Os tipos que se debuxan como cadrado. Ver `raioVisual`. */
+const CADRADOS: ReadonlySet<string> = new Set(['milestone'])
+
+const RAIO_FALLBACK = 24
+
+/**
+ * O radio que hai que respectarlle a un nodo.
+ *
+ * Un cadrado é o caso incómodo: o renderer debúxao de lado `2r`, así que
+ * a esquina chega a `r·√2` e dous cadrados postos en diagonal tócanse
+ * moito antes do que din os seus radios. (Foi o caso real: as dúas
+ * primeiras memorias, a 58 unidades, solapábanse 7.)
+ */
+export function raioVisual(nodo: NodeDef): number {
+  const r = nodo.size ?? RAIO_POR_TIPO[nodo.type] ?? RAIO_FALLBACK
+  const forma = nodo.shape ?? (CADRADOS.has(nodo.type) ? 'square' : 'circle')
+  return forma === 'square' ? r * Math.SQRT2 : r
+}
+
+/**
+ * Chan da separación. Non o manda o nodo senón a ETIQUETA: o texto vai
+ * debaixo do nodo e mide uns 57 unidades de media. A 58 medimos cero
+ * etiquetas pisadas con 200 palabras; por baixo empezarían.
+ */
+const ESPALLAMENTO_MINIMO = 58
+
+/** Aire entre dous nodos que se tocarían xusto. */
+const MARXE_NODOS = 8
+
+/** Separación entre veciños dun grupo: a que precise o nodo máis grande. */
+function espallamentoDe(nodos: readonly NodeDef[]): number {
+  const maior = nodos.reduce((m, n) => Math.max(m, raioVisual(n)), 0)
+  return Math.max(ESPALLAMENTO_MINIMO, 2 * maior + MARXE_NODOS)
+}
 
 /** Separación MÍNIMA entre as moreas de palabras. Medra coa maior delas. */
 const ESPALLAMENTO_MOREAS = 165
@@ -77,49 +134,62 @@ export function moreaDe(nodeId: string): string {
  */
 function colocarRexion(
   rexion: RexionId,
-  membros: readonly string[],
+  membros: readonly NodeDef[],
 ): { readonly posicions: Map<string, Position>; readonly raio: number } {
   const posicions = new Map<string, Position>()
 
   if (rexion !== REXIONS.linguaxe || membros.length <= 12) {
-    membros.forEach((id, k) => {
-      posicions.set(id, filotaxe(k, ESPALLAMENTO))
+    const espallamento = espallamentoDe(membros)
+    membros.forEach((nodo, k) => {
+      posicions.set(nodo.id, filotaxe(k, espallamento))
     })
-    return { posicions, raio: raioDe(membros.length, ESPALLAMENTO) }
+    return { posicions, raio: raioDe(membros.length, espallamento) }
   }
 
   // Moreas por son inicial, na orde en que apareceu a primeira palabra
   // de cada unha: así unha morea nova non move as vellas.
-  const moreas = new Map<string, string[]>()
-  for (const id of membros) {
-    const clave = id.startsWith(PREFIXO.palabra) ? moreaDe(id) : '·'
+  const moreas = new Map<string, NodeDef[]>()
+  for (const nodo of membros) {
+    const clave = nodo.id.startsWith(PREFIXO.palabra) ? moreaDe(nodo.id) : '·'
     const morea = moreas.get(clave)
     if (morea === undefined) {
-      moreas.set(clave, [id])
+      moreas.set(clave, [nodo])
     } else {
-      morea.push(id)
+      morea.push(nodo)
     }
+  }
+
+  // Cada morea co seu propio espallamento. Isto importa: as palabras son
+  // o nodo máis pequeno que hai (r=16) e non teñen por que pagar o
+  // tamaño de `verbo` ou de `mais`, que caen na morea sen son. Se se
+  // usase o máximo da rexión enteira, unha mente de 200 palabras
+  // inflábase un 31 % para dar sitio a dous nodos.
+  const espallamentos = new Map<string, number>()
+  const raios = new Map<string, number>()
+  for (const [clave, morea] of moreas) {
+    const e = espallamentoDe(morea)
+    espallamentos.set(clave, e)
+    raios.set(clave, raioDe(morea.length, e))
   }
 
   // A separación entre moreas ten que ser polo menos o diámetro da máis
   // grande: se non, unha morea de vinte palabras métese dentro da veciña.
   // (Foi o que quedaba: de 3.463 pares pisados baixaramos a 34, e eran
   // todos moreas chocando entre si.)
-  const maiorMorea = Math.max(...[...moreas.values()].map((m) => raioDe(m.length, ESPALLAMENTO)))
-  const separacion = Math.max(ESPALLAMENTO_MOREAS, maiorMorea * 2 + ESPALLAMENTO)
+  const maiorMorea = Math.max(...raios.values())
+  const maiorEspallamento = Math.max(...espallamentos.values())
+  const separacion = Math.max(ESPALLAMENTO_MOREAS, maiorMorea * 2 + maiorEspallamento)
 
   let raio = 0
   let k = 0
-  for (const [, morea] of moreas) {
+  for (const [clave, morea] of moreas) {
     const centro = filotaxe(k, separacion)
-    morea.forEach((id, j) => {
-      const p = filotaxe(j, ESPALLAMENTO)
-      posicions.set(id, { x: centro.x + p.x, y: centro.y + p.y })
+    const espallamento = espallamentos.get(clave) ?? ESPALLAMENTO_MINIMO
+    morea.forEach((nodo, j) => {
+      const p = filotaxe(j, espallamento)
+      posicions.set(nodo.id, { x: centro.x + p.x, y: centro.y + p.y })
     })
-    raio = Math.max(
-      raio,
-      Math.hypot(centro.x, centro.y) + raioDe(morea.length, ESPALLAMENTO),
-    )
+    raio = Math.max(raio, Math.hypot(centro.x, centro.y) + (raios.get(clave) ?? 0))
     k += 1
   }
 
@@ -136,7 +206,7 @@ export function colocar(treeDef: TreeDef): Map<string, Position> {
   posicions.set(treeDef.rootNodeId ?? 'eu', { x: 0, y: 0 })
 
   // Orde de aparición na TreeDef = orde de nacemento. Estable.
-  const porRexion = new Map<RexionId, string[]>()
+  const porRexion = new Map<RexionId, NodeDef[]>()
   for (const nodo of treeDef.nodes) {
     const g = nodo.group as RexionId | undefined
     if (g === undefined) {
@@ -144,9 +214,9 @@ export function colocar(treeDef: TreeDef): Map<string, Position> {
     }
     const lista = porRexion.get(g)
     if (lista === undefined) {
-      porRexion.set(g, [nodo.id])
+      porRexion.set(g, [nodo])
     } else {
-      lista.push(nodo.id)
+      lista.push(nodo)
     }
   }
 
@@ -167,10 +237,10 @@ export function colocar(treeDef: TreeDef): Map<string, Position> {
 
   // Cada rexión leva unha tallada angular proporcional ao seu tamaño:
   // a que ten douscentos nodos precisa moito máis sitio ca a que ten un.
-  const total = colocadas.reduce((suma, c) => suma + Math.max(c.raio, ESPALLAMENTO), 0)
+  const total = colocadas.reduce((suma, c) => suma + Math.max(c.raio, ESPALLAMENTO_MINIMO), 0)
   let acumulado = 0
   for (const c of colocadas) {
-    const peso = Math.max(c.raio, ESPALLAMENTO)
+    const peso = Math.max(c.raio, ESPALLAMENTO_MINIMO)
     const tallada = (peso / total) * Math.PI * 2
     const angulo = -Math.PI / 2 + acumulado + tallada / 2
     acumulado += tallada
