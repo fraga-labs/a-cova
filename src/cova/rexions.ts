@@ -17,6 +17,10 @@ export const REXIONS = {
   // Igual cá SOMBRA: a rexión dos SONS nace co primeiro son que oe, non
   // na semente. Ao nacer, o bebé aínda non oíu ningún.
   sons: 'sons',
+  // O MUNDO é literalmente a parede da cova: as situacións que algunha
+  // vez lle proxectaches. Non hai ningunha ao nacer, e nunca haberá máis
+  // cás que ti lle amosaches. É a onde apuntan os significados.
+  mundo: 'mundo',
 } as const
 
 export type RexionId = (typeof REXIONS)[keyof typeof REXIONS]
@@ -29,6 +33,7 @@ export const COR_REXION: Record<RexionId, string> = {
   memorias: '#5aa9e0',
   sombra: '#8a8f9c',
   sons: '#c8a15a',
+  mundo: '#5ac8b4',
 }
 
 export const ETIQUETA_REXION: Record<RexionId, string> = {
@@ -39,6 +44,7 @@ export const ETIQUETA_REXION: Record<RexionId, string> = {
   memorias: 'MEMORIAS',
   sombra: 'SOMBRA',
   sons: 'SONS',
+  mundo: 'MUNDO',
 }
 
 /**
@@ -57,6 +63,7 @@ export const PREFIXO = {
   palabra: 'palabra:',
   concepto: 'concepto:',
   memoria: 'memoria:',
+  situacion: 'situacion:',
 } as const
 
 // ── FIN: as rexións ──

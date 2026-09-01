@@ -1,6 +1,6 @@
 # A LINGUAXE — deseño v2
 
-Estado: **capas 0, 1 e 2 implementadas** (slice A+B). As capas 3 a 6 seguen sendo proposta.
+Estado: **capas 0, 1, 2 e 3 implementadas** (slices A+B+C). As capas 4 a 6 seguen sendo proposta.
 O que se describe abaixo como «o que está mal» era a v1, xa substituída.
 
 ---
@@ -104,6 +104,21 @@ errada. Na pantalla vese unha mente corrixíndose soa. É a mellor imaxe que pod
 
 *Aparello: `add_edge` / `remove_edge` en `applyChanges`.*
 
+**Como quedou.** O referente desta cova é a **situación**, non un obxecto: non hai cans nin gatos,
+hai comer, o baño, os brazos. Así que a sobreextensión aquí é dicirlle «papa» comendo e tamén nos
+brazos — e a palabra significa as dúas cousas ata que chega «mama».
+
+As situacións son nodos de verdade, na rexión nova **MUNDO**, e nacen cando llas amosas por
+primeira vez. Iso fai literal o principio reitor: o bebé non ten máis mundo có que ti lle
+proxectaches, e vese contando os nodos.
+
+Tres constantes gobernan todo (`sentido.ts`): unha ligazón conta a partir de 30, cada exposición
+coa atención chea suma 22, e unha reclamación retírase cando baixa da metade da forza da palabra
+que xa é dona desa situación. Dúas garantías: **nunca se lle quita a unha palabra o seu sentido
+máis forte** (estreitar non é borrar), e **dúas palabras poden significar o mesmo** se as dúas
+están fortes — se non, os conceptos, que nacen de palabras que comparten situación, non poderían
+nacer nunca.
+
 ### Capa 4 — O ESTOUPIDO
 
 Ao chegar a N palabras comprendidas nace un `keystone` que cambia a economía: a partir de aí unha
@@ -150,8 +165,8 @@ Ordenadas por (valor que engaden) ÷ (traballo que custan):
 | --- | --- | --- | --- |
 | A | Capas 0+2: sons + comprensión/produción separadas | O corazón. Aparece a curva e o bebé mispronuncia. | **feito** |
 | B | Capa 1: atención conxunta de verdade | Fai que ensinar teña intención, non temporizador. | **feito** |
-| C | Capa 3: significado como arestas + sobreextensión | A mellor imaxe do proxecto: a mente corrixíndose. | seguinte |
-| D | Capas 4+5: estoupido e dúas palabras | Dá un arco longo á partida. | proposta |
+| C | Capa 3: significado como arestas + sobreextensión | A mellor imaxe do proxecto: a mente corrixíndose. | **feito** |
+| D | Capas 4+5: estoupido e dúas palabras | Dá un arco longo á partida. | seguinte |
 | E | Capa 6: regras e sobrerregularización | O momento «uau», pero é o máis delicado. | proposta |
 
 ## 7. Como quedou, medido

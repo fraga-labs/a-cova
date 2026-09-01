@@ -100,6 +100,7 @@ const CHANZO_ANEL = 80
 /** Orde das rexións arredor do centro. Fixa: que non salten de sitio. */
 const ORDE: readonly RexionId[] = [
   REXIONS.corpo,
+  REXIONS.mundo,
   REXIONS.sons,
   REXIONS.linguaxe,
   REXIONS.afectos,

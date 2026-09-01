@@ -23,6 +23,8 @@ export type TipoAcontecemento =
   | 'auto'
   | 'sombra'
   | 'ausencia'
+  | 'mundo'
+  | 'estreita'
 
 export interface Acontecemento {
   readonly id: string

@@ -18,7 +18,7 @@
 // Este módulo é CASE PURO: recibe o engine e devolve o que pasou. Non
 // toca React nin o DOM. Por iso é testable sen navegador.
 
-import type { TreeEngine } from '@yggdrasil-forge/core'
+import type { NodeDef, TreeEngine } from '@yggdrasil-forge/core'
 import { isOk } from '@yggdrasil-forge/core'
 import {
   DIXESTION_MS,
@@ -33,6 +33,7 @@ import {
 import { type Acontecemento, acontecemento } from './acontecementos.js'
 import { type EstimuloId, conceptoDe } from './lexico.js'
 import { type Atencion, type Familiaridade, type Referentes, SEN_ATENCION } from './linguaxe.js'
+import { sentidoPrincipal } from './sentido.js'
 import { PREFIXO, REXIONS, TAG_AUTO } from './mente-semente.js'
 import { PREFIXO_SOMBRA, SOMBRAS } from './sombras.js'
 
@@ -117,7 +118,7 @@ export async function reconciliarAutonomos(
       if (isOk(r)) {
         const ehSombra = nodeDef.id.startsWith(PREFIXO_SOMBRA)
         feitos.push(
-          acontecemento(ehSombra ? 'sombra' : 'auto', textoAceso(nodeDef.id), agora, nodeDef.id),
+          acontecemento(ehSombra ? 'sombra' : 'auto', textoAceso(nodeDef), agora, nodeDef.id),
         )
       }
       continue
@@ -133,7 +134,8 @@ export async function reconciliarAutonomos(
   return feitos
 }
 
-function textoAceso(nodeId: string): string {
+function textoAceso(nodeDef: NodeDef): string {
+  const nodeId = nodeDef.id
   if (nodeId.startsWith(PREFIXO_SOMBRA)) {
     const sombra = SOMBRAS.find((x) => `${PREFIXO_SOMBRA}${x.id}` === nodeId)
     return sombra?.leccion ?? 'aprendeu algo da ausencia'
@@ -147,8 +149,13 @@ function textoAceso(nodeId: string): string {
       return 'está contento'
     case 'tristura':
       return 'está triste'
-    default:
-      return `acendeuse «${nodeId}» soa`
+    default: {
+      // A etiqueta, non o id: o coidador non ten por que ler
+      // «situacion:amor» na súa liña temporal.
+      const etiqueta =
+        typeof nodeDef.label === 'string' ? nodeDef.label : (nodeDef.label?.gl ?? nodeId)
+      return `acendeuse «${etiqueta}» soa`
+    }
   }
 }
 
@@ -184,8 +191,10 @@ export async function xerarConceptos(
     if (engine.getNodeState(nodo.id)?.state !== 'maxed') {
       continue
     }
-    const referente = referentes[nodo.id]
-    if (referente === undefined || referente === 'nada') {
+    // O sentido PRINCIPAL: unha palabra pode significar máis dunha cousa
+    // (capa 3), pero o concepto sae daquela na que máis tira.
+    const referente = sentidoPrincipal(referentes[nodo.id])
+    if (referente === null || referente === 'nada') {
       continue
     }
     const lista = porSituacion.get(referente)

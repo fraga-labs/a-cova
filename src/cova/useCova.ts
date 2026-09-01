@@ -18,6 +18,7 @@ import { gardar, recuperar } from './persistencia.js'
 import { type Acontecemento, acontecemento } from './acontecementos.js'
 import { poñerAoDia } from './ausencia.js'
 import { recolocar } from './colocacion.js'
+import { reconciliarSentidos } from './sentido.js'
 import { DECAEMENTO_ATENCION, ensinarPalabra, esquecer } from './linguaxe.js'
 import {
   ESTADO_INICIAL,
@@ -202,11 +203,15 @@ export function useCova(): Cova {
     const autos = await reconciliarAutonomos(engine, t)
     // Os autónomos disparan `effects`, e eses non respectan o `max`.
     await reclamparRecursos(engine)
-    const conceptos = await xerarConceptos(engine, politicaRef.current.referentes, t)
+    // O significado, antes cós conceptos: a poda pode quitarlle a unha
+    // palabra a situación pola que ía entrar nun concepto.
+    const sentidos = await reconciliarSentidos(engine, politicaRef.current.referentes, t)
+    mudarPolitica((p) => ({ ...p, referentes: sentidos.referentes }))
+    const conceptos = await xerarConceptos(engine, sentidos.referentes, t)
     // Ao final: o que naceu aínda non ten sitio no debuxo.
     await recolocar(engine)
-    return [...autos, ...conceptos]
-  }, [engine])
+    return [...autos, ...sentidos.acontecementos, ...conceptos]
+  }, [engine, mudarPolitica])
 
   // ── O arranque ──
   // Dous casos, e ata agora só había un.

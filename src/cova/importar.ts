@@ -11,6 +11,7 @@ import type { TreeDef, TreeState } from '@yggdrasil-forge/core'
 import type { Acontecemento } from './acontecementos.js'
 import type { Gardado } from './persistencia.js'
 import { ESTADO_INICIAL, type EstadoPolitica } from './politica.js'
+import { normalizarReferentes } from './sentido.js'
 
 /** O mínimo que precisa `importar` para non perder nada polo camiño. */
 const FORMATO_MINIMO = 2
@@ -64,10 +65,15 @@ export function lerBebe(texto: string): Importacion {
       state: meta.estado as unknown as TreeState,
       // Igual ca en `recuperar`: fusionada sobre a inicial, para que un
       // ficheiro dun día que non tiña un campo non rompa o código de hoxe.
-      politica: {
-        ...ESTADO_INICIAL,
-        ...(ehObxecto(meta.politica) ? (meta.politica as Partial<EstadoPolitica>) : {}),
-      },
+      politica: (() => {
+        const p = {
+          ...ESTADO_INICIAL,
+          ...(ehObxecto(meta.politica) ? (meta.politica as Partial<EstadoPolitica>) : {}),
+        }
+        // Ver `persistencia.ts`: un bebé exportado antes da capa 3 trae
+        // os significados na forma vella.
+        return { ...p, referentes: normalizarReferentes(p.referentes) }
+      })(),
       acontecementos: Array.isArray(meta.acontecementos)
         ? (meta.acontecementos as readonly Acontecemento[])
         : [],

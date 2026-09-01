@@ -26,6 +26,10 @@ const VOCES: Record<TipoAcontecemento, Voz | null> = {
   sombra: 'sombra',
   // Volver e atopar o que deixaches non é unha boa nova.
   ausencia: 'chorar',
+  // Unha cousa nova no mundo é un descubrimento pequeno.
+  mundo: 'oe',
+  // Estreitar un significado é aprender, e soa a iso.
+  estreita: 'concepto',
 }
 
 /** Os autónomos que si teñen voz propia. */

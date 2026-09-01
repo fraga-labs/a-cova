@@ -123,6 +123,7 @@ function encadrarLexible(arbore: SkillTreeHandle | null, contedor: HTMLElement |
 
 const ORDE_REXIONS: readonly RexionId[] = [
   REXIONS.corpo,
+  REXIONS.mundo,
   REXIONS.sons,
   REXIONS.linguaxe,
   REXIONS.afectos,

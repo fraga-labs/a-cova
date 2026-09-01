@@ -27,6 +27,7 @@ import { comoDi, dia, gananciaSon, segmentar } from './fonoloxia.js'
 import { type EstimuloId, normalizar } from './lexico.js'
 import { PREFIXO, REXIONS } from './mente-semente.js'
 import { type Acontecemento, acontecemento } from './acontecementos.js'
+import { type Referentes, reforzar } from './sentido.js'
 
 export const PREFIXO_SON = 'son:'
 
@@ -75,12 +76,13 @@ export const DECAEMENTO_ATENCION = 12
 export type Familiaridade = Record<string, number>
 
 /**
- * A situación na que se aprendeu cada palabra, indexada por `nodeId`.
- * É a materia prima dos conceptos: o que teñen en común dúas palabras
- * aprendidas no mesmo sitio. E será tamén a da capa 3 do deseño, cando
- * o significado pase a ser unha aresta e apareza a sobreextensión.
+ * O significado de cada palabra vive en `sentido.ts` desde a capa 3:
+ * xa non é UNHA situación senón canto tira a palabra cara a cada unha,
+ * que é o que permite significar de máis e despois estreitarse.
+ * Reexpórtase aquí porque `ensinarPalabra` segue sendo quen o alimenta.
  */
-export type Referentes = Record<string, EstimuloId>
+export type { Referentes, Sentidos } from './sentido.js'
+
 
 export interface Atencion {
   /** A que se está atendendo agora mesmo. `null` = a nada. */
@@ -299,10 +301,14 @@ export async function ensinarPalabra(
   let comprension = antes
   // A situación na que se aprendeu. Só se anota cando hai atención: unha
   // palabra oída no baleiro non pertence a ningunha situación.
-  const seguintesReferentes: Referentes = { ...referentes }
-  if (enContexto && atencion.referente !== null) {
-    seguintesReferentes[nodeId] = atencion.referente
-  }
+  //
+  // REFORZA, non substitúe. Antes a última situación borraba a anterior
+  // en silencio, así que unha palabra non se podía equivocar de
+  // significado — nin, polo tanto, corrixirse.
+  const seguintesReferentes =
+    enContexto && atencion.referente !== null
+      ? reforzar(referentes, nodeId, atencion.referente, atencion.forza)
+      : referentes
 
   if (enContexto) {
     // Rendementos decrecentes: as primeiras veces ensinan moito máis cás

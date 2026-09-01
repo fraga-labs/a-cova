@@ -13,6 +13,7 @@ import { documentoBebe, nomeFicheiro } from './exportar.js'
 import { menteSemente } from './mente-semente.js'
 import { type Familiaridade, type Referentes, ensinarPalabra } from './linguaxe.js'
 import { ESTADO_INICIAL, type EstadoPolitica, xerarConceptos } from './politica.js'
+import { idSituacion, reconciliarSentidos } from './sentido.js'
 
 const DESTINO = resolve(process.cwd(), '.tmp/bebe-medrado.json')
 
@@ -45,8 +46,11 @@ async function criar(): Promise<{ engine: TreeEngine; politica: EstadoPolitica }
       politica = { ...politica, familiaridade, referentes, ditas: r?.ditas ?? politica.ditas }
     }
   }
-  await xerarConceptos(engine, referentes, 1)
-  return { engine, politica }
+  // O significado tamén: así o documento que se valida co CLI leva os
+  // nodos e o grupo da rexión MUNDO, que nacen en runtime.
+  const sentidos = await reconciliarSentidos(engine, referentes, 1)
+  await xerarConceptos(engine, sentidos.referentes, 1)
+  return { engine, politica: { ...politica, referentes: sentidos.referentes } }
 }
 
 describe('exportar bebé', () => {
@@ -64,6 +68,9 @@ describe('exportar bebé', () => {
     // Nodos nacidos en runtime, non declarados na semente.
     expect(doc.nodes.some((n) => n.id === 'palabra:auga')).toBe(true)
     expect(doc.nodes.some((n) => n.id === 'concepto:auga')).toBe(true)
+    // E o MUNDO: as situacións que se lle amosaron, coas súas arestas.
+    expect(doc.nodes.some((n) => n.id === idSituacion('auga'))).toBe(true)
+    expect(doc.edges.some((x) => x.id.startsWith('e-sentido-'))).toBe(true)
 
     const resultado = validateTreeDef(doc)
     if (!isOk(resultado)) {

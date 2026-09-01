@@ -28,6 +28,7 @@ try {
     '/src/cova/politica.ts',
   )
   const { recolocar } = await servidor.ssrLoadModule('/src/cova/colocacion.ts')
+  const { reconciliarSentidos } = await servidor.ssrLoadModule('/src/cova/sentido.ts')
   const { xerarSombras } = await servidor.ssrLoadModule('/src/cova/sombras.ts')
 
   const engine = new core.TreeEngine(menteSemente(), {})
@@ -69,6 +70,8 @@ try {
     engine.tick()
     await xerarSombras(engine, engine.getBudget().resources.soidade ?? 0)
     await reconciliarAutonomos(engine, t)
+    const sentidos = await reconciliarSentidos(engine, referentes, t)
+    referentes = sentidos.referentes
     await xerarConceptos(engine, referentes, t)
     await recolocar(engine)
     const r = await esquecer(engine, familiaridade, t)

@@ -104,6 +104,12 @@ Importar **substitúe** o bebé que teñas, así que pregunta antes.
 - **Conceptos** — dúas palabras que xa di **e que se aprenderon na mesma situación** fan nacer un
   nodo-concepto que as require (`all`). A mente gaña un piso. Funciona con calquera palabra: antes
   dependía dunha táboa pechada de 28 e, en canto o vocabulario se liberou, deixaron de nacer.
+- **O significado, e a mente corrixíndose soa** (capa 3) — unha palabra xa non ten unha situación:
+  ten **arestas** ás situacións nas que a aprendeu. Dislle «papa» comendo e tamén nos brazos, e
+  «papa» significa as dúas cousas: iso é **sobreextensión**, o erro clásico de chamarlle «can» ao
+  gato, e non é un fallo senón aprender. Cando chega «mama» e se fai dona dos brazos, a aresta
+  errada **desaparece soa**. As situacións viven na rexión **MUNDO**: literalmente a parede da
+  cova, e nunca ten máis cás cousas que ti lle amosaches.
 - **Esquecemento** — as palabras teñen frescura que decae; sen reforzo baixan un rango, e ao final
   pérdense.
 - **As sombras** — o que aprende cando **non** vas. Unha `soidade` acumúlase por cada necesidade
@@ -145,6 +151,7 @@ consumidores.
 | `src/cova/colocacion.ts` | Onde vai cada nodo. Filotaxe, para que non se pisen nin con mil. |
 | `src/cova/fonoloxia.ts` | Como lle sae unha palabra cos sons que domina. Puro e testado. |
 | `src/cova/lexico.ts` | A táboa de estímulos e campos semánticos. Está á vista a propósito. |
+| `src/cova/sentido.ts` | O significado como arestas: sobreextensión e exclusividade mutua. |
 | `src/cova/sombras.ts` | As leccións da ausencia e o que lle cambian ao mundo. |
 | `src/cova/drives.ts` | Os 5 drives, os limiares e as constantes do reloxo. |
 | `src/cova/ausencia.ts` | O que pasou mentres non estabas, e o seu tope. |

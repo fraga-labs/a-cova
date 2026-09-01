@@ -6,6 +6,7 @@
 import type { TreeDef, TreeState } from '@yggdrasil-forge/core'
 import type { Acontecemento } from './acontecementos.js'
 import { ESTADO_INICIAL, type EstadoPolitica } from './politica.js'
+import { normalizarReferentes } from './sentido.js'
 
 // v2: a política cambiou de forma coa reforma da linguaxe (fóra
 // `estimulo`/`frescuras`, dentro `atencion`). A clave vai versionada
@@ -48,9 +49,16 @@ export function recuperar(): Gardado | null {
     // e sen isto o código novo rompía ao tocalos (`p.recentes.filter` de
     // `undefined`) — e rompía en silencio, porque a cola de mutacións
     // captura os erros. Custounos dúas voltas atopalo.
+    const politica = { ...ESTADO_INICIAL, ...(dato.politica ?? {}) }
     return {
       ...dato,
-      politica: { ...ESTADO_INICIAL, ...(dato.politica ?? {}) },
+      politica: {
+        ...politica,
+        // Os referentes cambiaron de forma coa capa 3 (de «unha
+        // situación» a «canto tira cara a cada unha»). Un bebé gardado
+        // antes non pode perder o que sabía.
+        referentes: normalizarReferentes(politica.referentes),
+      },
       acontecementos: dato.acontecementos ?? [],
       nome: dato.nome ?? 'Meco',
     } as Gardado
